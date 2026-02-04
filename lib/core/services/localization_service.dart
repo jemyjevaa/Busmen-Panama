@@ -68,6 +68,22 @@ class LocalizationService extends ChangeNotifier {
       'change_password_btn': 'CAMBIAR CONTRASEÑA',
       'enter_new_password': 'Ingrese una contraseña nueva',
       'password_updated': 'Contraseña actualizada correctamente',
+
+      // Login Extras
+      'register': 'Registrarse',
+      'forgot_password': '¿Olvidaste tu contraseña?',
+      'create_account': 'Crear Cuenta',
+      'recover_access': 'Recuperar Acceso',
+      'name_label': 'Nombre',
+      'email_label': 'Correo',
+      'user_n_label': 'Usuario', // To avoid conflict with user_label if needed, or reuse
+      'register_btn': 'REGISTRAR',
+      'send_btn': 'ENVIAR',
+      'cancel_btn': 'CANCELAR',
+      'back_btn': 'REGRESAR',
+      'register_success': 'Usuario registrado correctamente',
+      'recovery_sent': 'Correo de recuperación enviado',
+      'no_profile': 'SIN PERFIL',
     },
     'EN': {
       // Login
@@ -132,6 +148,22 @@ class LocalizationService extends ChangeNotifier {
       'change_password_btn': 'CHANGE PASSWORD',
       'enter_new_password': 'Enter a new password',
       'password_updated': 'Password updated successfully',
+
+      // Login Extras
+      'register': 'Register',
+      'forgot_password': 'Forgot password?',
+      'create_account': 'Create Account',
+      'recover_access': 'Recover Access',
+      'name_label': 'Name',
+      'email_label': 'Email',
+      'user_n_label': 'Username',
+      'register_btn': 'REGISTER',
+      'send_btn': 'SEND',
+      'cancel_btn': 'CANCEL',
+      'back_btn': 'GO BACK',
+      'register_success': 'User registered successfully',
+      'recovery_sent': 'Recovery email sent',
+      'no_profile': 'NO PROFILE',
     },
   };
 

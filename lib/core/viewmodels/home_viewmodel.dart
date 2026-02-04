@@ -11,6 +11,14 @@ class HomeViewModel extends ChangeNotifier {
   bool _isLoadingLocation = true;
   bool get isLoadingLocation => _isLoadingLocation;
 
+  int _userSide = 1; // 1: Side 1, 2: Side 2
+  int get userSide => _userSide;
+
+  void setSide(int side) {
+    _userSide = side;
+    notifyListeners();
+  }
+
   MapType _currentMapType = MapType.normal;
   MapType get currentMapType => _currentMapType;
 

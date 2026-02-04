@@ -334,35 +334,47 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 const SizedBox(height: 15),
                 // User Info with Icon
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.person, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Juan Pérez',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                if (viewModel.userSide == 1) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.person, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Juan Pérez',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'email@example.com',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+                    ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  localization.getString('driver_role'),
-                  style: const TextStyle(fontSize: 14, color: Colors.white70),
-                ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'email@example.com',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    localization.getString('driver_role'),
+                    style: const TextStyle(fontSize: 14, color: Colors.white70),
+                  ),
+                ] else ...[
+                  Text(
+                    localization.getString('no_profile'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -372,17 +384,19 @@ class _HomeViewState extends State<HomeView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
               children: [
-                _buildDrawerItem(
-                  icon: Icons.person_outline,
-                  title: localization.getString('profile'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileView()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 10),
+                if (viewModel.userSide == 1) ...[
+                  _buildDrawerItem(
+                    icon: Icons.person_outline,
+                    title: localization.getString('profile'),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ProfileView()),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 _buildDrawerItem(
                   icon: Icons.schedule_outlined,
                   title: localization.getString('schedules'),
@@ -471,6 +485,19 @@ class _HomeViewState extends State<HomeView> {
 
                 // Logout Button - Part of the list flow
                 _buildLogoutItem(context, localization),
+
+                if (viewModel.userSide == 2) ...[
+                  const SizedBox(height: 10),
+                  _buildDrawerItem(
+                    icon: Icons.delete_outline,
+                    title: localization.getString('delete_user'),
+                    onTap: () {
+                      // Implementation for deleting user
+                      debugPrint('Eliminando usuario...');
+                    },
+                    isDestructive: true,
+                  ),
+                ],
               ],
             ),
           ),
@@ -483,7 +510,11 @@ class _HomeViewState extends State<HomeView> {
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    bool isDestructive = false,
   }) {
+    final color = isDestructive ? Colors.red[700]! : const Color(0xFF064DC3);
+    final bgColor = isDestructive ? Colors.red.withOpacity(0.1) : const Color(0xFF064DC3).withOpacity(0.1);
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 5),
       visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
@@ -491,21 +522,21 @@ class _HomeViewState extends State<HomeView> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFF064DC3).withOpacity(0.1),
+          color: bgColor,
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: const Color(0xFF064DC3), size: 20),
+        child: Icon(icon, color: color, size: 20),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF333333),
+          color: isDestructive ? Colors.red[700] : const Color(0xFF333333),
           letterSpacing: 0.5,
         ),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+      trailing: isDestructive ? null : const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
       onTap: onTap,
     );
   }
