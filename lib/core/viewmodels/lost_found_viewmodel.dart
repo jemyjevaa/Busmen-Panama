@@ -20,12 +20,12 @@ class LostFoundViewModel extends ChangeNotifier {
     "Ruta C - Sur"
   ];
 
-  void setSelectedRoute(String? route) {
+  void setRoute(String? route) {
     _selectedRoute = route;
     notifyListeners();
   }
 
-  void setSelectedDate(DateTime date) {
+  void setDate(DateTime date) {
     _selectedDate = date;
     notifyListeners();
   }
@@ -36,9 +36,11 @@ class LostFoundViewModel extends ChangeNotifier {
         descriptionController.text.isEmpty || 
         _selectedRoute == null || 
         _selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor complete todos los campos')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Por favor complete todos los campos')),
+        );
+      }
       return;
     }
 

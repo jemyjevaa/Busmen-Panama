@@ -7,6 +7,7 @@ import 'package:busmen_panama/core/viewmodels/profile_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/schedules_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
+import 'package:busmen_panama/core/services/localization_service.dart';
 
 void main() {
   runApp(
@@ -18,6 +19,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => SchedulesViewModel()),
         ChangeNotifierProvider(create: (_) => LostFoundViewModel()),
         ChangeNotifierProvider(create: (_) => PasswordViewModel()),
+        ChangeNotifierProvider(create: (_) => LocalizationService()),
       ],
       child: const MyApp(),
     ),

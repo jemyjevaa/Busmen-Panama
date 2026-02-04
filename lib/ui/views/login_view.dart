@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/login_viewmodel.dart';
+import 'package:busmen_panama/core/services/localization_service.dart';
 import 'package:busmen_panama/ui/views/home_view.dart';
 
 class LoginView extends StatelessWidget {
@@ -9,7 +10,9 @@ class LoginView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    // Access the viewmodel
     final viewModel = context.watch<LoginViewModel>();
+    final localization = context.watch<LocalizationService>();
 
     return Scaffold(
       body: Stack(
@@ -59,38 +62,38 @@ class LoginView extends StatelessWidget {
                 children: [
                   // User Label
                   Text(
-                    viewModel.getString('user_label').toUpperCase(),
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                    localization.getString('user_label'),
+                    style: const TextStyle(
+                      color: Color(0xFF064DC3),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.0,
                     ),
                   ),
                   const SizedBox(height: 8),
                   // User Field
                   _buildTextField(
                     controller: viewModel.userController,
-                    hint: viewModel.getString('user_label'),
+                    hint: localization.getString('user_label'),
                     icon: Icons.person_outline,
                   ),
                   const SizedBox(height: 25), // Increased spacing
 
                   // Password Label
                   Text(
-                    viewModel.getString('pass_label').toUpperCase(),
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                    localization.getString('pass_label'),
+                    style: const TextStyle(
+                      color: Color(0xFF064DC3),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.0,
                     ),
                   ),
                   const SizedBox(height: 8),
                   // Password Field
                   _buildTextField(
                     controller: viewModel.passwordController,
-                    hint: viewModel.getString('pass_label'),
+                    hint: localization.getString('pass_label'),
                     icon: Icons.lock_outline,
                     isPassword: true,
                   ),
@@ -109,10 +112,10 @@ class LoginView extends StatelessWidget {
                             value: viewModel.rememberMe,
                             onChanged: viewModel.toggleRememberMe,
                             title: Text(
-                              viewModel.getString('remember_me'),
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 11,
+                              localization.getString('remember_me'),
+                              style: const TextStyle(
+                                color: Color(0xFF555555), // Dark gray
+                                fontSize: 14,
                               ),
                             ),
                             controlAffinity: ListTileControlAffinity.leading,
@@ -136,14 +139,14 @@ class LoginView extends StatelessWidget {
                             _buildLanguageOption(
                               context,
                               'ES',
-                              viewModel.currentLanguage == 'ES',
-                              () => viewModel.setLanguage('ES'),
+                              localization.currentLanguage == 'ES',
+                              () => localization.setLanguage('ES'),
                             ),
                             _buildLanguageOption(
                               context,
                               'EN',
-                              viewModel.currentLanguage == 'EN',
-                              () => viewModel.setLanguage('EN'),
+                              localization.currentLanguage == 'EN',
+                              () => localization.setLanguage('EN'),
                             ),
                           ],
                         ),
@@ -174,7 +177,7 @@ class LoginView extends StatelessWidget {
                         elevation: 2,
                       ),
                       child: Text(
-                        viewModel.getString('login_btn'),
+                        localization.getString('login_btn'),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

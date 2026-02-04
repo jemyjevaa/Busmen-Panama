@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
+import 'package:busmen_panama/core/services/localization_service.dart';
 import 'package:busmen_panama/ui/views/profile_view.dart';
 import 'package:busmen_panama/ui/views/schedules_view.dart';
 import 'package:busmen_panama/ui/views/lost_found_view.dart';
@@ -30,9 +31,10 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     // Access the viewmodel
     final viewModel = context.watch<HomeViewModel>();
+    final localization = context.watch<LocalizationService>();
 
     return Scaffold(
-      drawer: _buildDrawer(context, viewModel),
+      drawer: _buildDrawer(context, viewModel, localization),
       body: viewModel.isLoadingLocation
           ? const Center(child: CircularProgressIndicator())
           : Builder(
@@ -101,24 +103,24 @@ class _HomeViewState extends State<HomeView> {
                           const SizedBox(height: 16),
                           // Expanded Options
                           _buildCustomOption(
-                            viewModel,
-                            viewModel.getString('normal'),
+                            localization.getString('normal'),
                             MapType.normal,
                             Icons.map_outlined,
+                            viewModel, // Pass viewModel for checking state
                           ),
                           const SizedBox(height: 12),
                           _buildCustomOption(
-                            viewModel,
-                            viewModel.getString('satellite'),
+                            localization.getString('satellite'),
                             MapType.satellite,
                             Icons.satellite_outlined,
+                            viewModel,
                           ),
                           const SizedBox(height: 12),
                           _buildCustomOption(
-                            viewModel,
-                            viewModel.getString('hybrid'),
+                            localization.getString('hybrid'),
                             MapType.hybrid,
                             Icons.layers_outlined,
+                            viewModel,
                           ),
                         ],
                       ],
@@ -139,10 +141,10 @@ class _HomeViewState extends State<HomeView> {
                             // "Ruta no seleccionada" Banner
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 19),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
-                                  borderRadius: BorderRadius.circular(30),
+                                  borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.1),
@@ -152,7 +154,7 @@ class _HomeViewState extends State<HomeView> {
                                   ],
                                 ),
                                 child: Text(
-                                  viewModel.getString('route_not_selected'),
+                                  localization.getString('route_not_selected'),
                                   style: const TextStyle(
                                     color: Color(0xFF333333),
                                     fontWeight: FontWeight.w600,
@@ -165,10 +167,10 @@ class _HomeViewState extends State<HomeView> {
                             const SizedBox(width: 12),
                             // Standalone Circular Button
                             Container(
-                              width: 45,
-                              height: 45,
+                              width: 55,
+                              height: 55,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF064DC3), // Blue action button or similar
+                                color: const Color(0xFFF8B600),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
@@ -179,9 +181,9 @@ class _HomeViewState extends State<HomeView> {
                                 ],
                               ),
                               child: const Icon(
-                                Icons.refresh, // Using refresh or similar action icon as placeholder
-                                color: Colors.white,
-                                size: 24,
+                                Icons.add_location,
+                                color: Colors.white, // Dark icon for contrast
+                                size: 29,
                               ),
                             ),
                           ],
@@ -205,7 +207,7 @@ class _HomeViewState extends State<HomeView> {
                               ),
                             ),
                             child: Text(
-                              viewModel.getString('select_route'),
+                              localization.getString('select_route'),
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -224,10 +226,10 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildCustomOption(
-    HomeViewModel viewModel,
     String label,
     MapType type,
     IconData icon,
+    HomeViewModel viewModel,
   ) {
     final isSelected = viewModel.currentMapType == type;
     final primaryBlue = const Color(0xFF064DC3);
@@ -289,7 +291,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, HomeViewModel viewModel) {
+  Widget _buildDrawer(BuildContext context, HomeViewModel viewModel, LocalizationService localization) {
     return Drawer(
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -356,6 +358,11 @@ class _HomeViewState extends State<HomeView> {
                     fontSize: 12,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  localization.getString('driver_role'),
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                ),
               ],
             ),
           ),
@@ -367,7 +374,7 @@ class _HomeViewState extends State<HomeView> {
               children: [
                 _buildDrawerItem(
                   icon: Icons.person_outline,
-                  title: viewModel.getString('profile'),
+                  title: localization.getString('profile'),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -378,7 +385,7 @@ class _HomeViewState extends State<HomeView> {
                 const SizedBox(height: 10),
                 _buildDrawerItem(
                   icon: Icons.schedule_outlined,
-                  title: viewModel.getString('schedules'),
+                  title: localization.getString('schedules'),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -389,13 +396,13 @@ class _HomeViewState extends State<HomeView> {
                 const SizedBox(height: 10),
                 _buildDrawerItem(
                   icon: Icons.monitor_heart_outlined,
-                  title: viewModel.getString('monitoring_center'),
+                  title: localization.getString('monitoring_center'),
                   onTap: () {},
                 ),
                 const SizedBox(height: 10),
                 _buildDrawerItem(
                   icon: Icons.search_outlined,
-                  title: viewModel.getString('lost_found'),
+                  title: localization.getString('lost_found'),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -406,7 +413,7 @@ class _HomeViewState extends State<HomeView> {
                 const SizedBox(height: 10),
                 _buildDrawerItem(
                   icon: Icons.lock_outline,
-                  title: viewModel.getString('password'),
+                  title: localization.getString('password'),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -430,7 +437,7 @@ class _HomeViewState extends State<HomeView> {
                       child: const Icon(Icons.info_outline, color: Color(0xFF064DC3), size: 20),
                     ),
                     title: Text(
-                      viewModel.getString('information'),
+                      localization.getString('information'),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -442,17 +449,17 @@ class _HomeViewState extends State<HomeView> {
                     childrenPadding: EdgeInsets.zero,
                     children: [
                       _buildSubMenuItem(
-                        viewModel.getString('announcements'),
+                        localization.getString('announcements'),
                         icon: Icons.campaign_outlined,
                         onTap: () {},
                       ),
                       _buildSubMenuItem(
-                        viewModel.getString('regulations'),
+                        localization.getString('regulations'),
                         icon: Icons.gavel_outlined,
                         onTap: () {},
                       ),
                       _buildSubMenuItem(
-                        viewModel.getString('manual'),
+                        localization.getString('manual'),
                         icon: Icons.menu_book_outlined,
                         onTap: () {},
                       ),
@@ -463,7 +470,7 @@ class _HomeViewState extends State<HomeView> {
                 const SizedBox(height: 25), // Spacing before logout
 
                 // Logout Button - Part of the list flow
-                _buildLogoutItem(context, viewModel),
+                _buildLogoutItem(context, localization),
               ],
             ),
           ),
@@ -521,7 +528,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildLogoutItem(BuildContext context, HomeViewModel viewModel) {
+  Widget _buildLogoutItem(BuildContext context, LocalizationService localization) {
     return InkWell(
       onTap: () {
         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
@@ -541,7 +548,7 @@ class _HomeViewState extends State<HomeView> {
             ),
             const SizedBox(width: 15),
             Text(
-              viewModel.getString('logout'), // Changed here
+              localization.getString('logout'), // Changed here
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
