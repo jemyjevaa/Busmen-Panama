@@ -14,67 +14,7 @@ class HomeViewModel extends ChangeNotifier {
   MapType _currentMapType = MapType.normal;
   MapType get currentMapType => _currentMapType;
 
-  // Localization
-  String _currentLanguage = 'ES';
-  String get currentLanguage => _currentLanguage;
-
-  final Map<String, Map<String, String>> _localizedValues = {
-    'ES': {
-      // Drawer
-      'driver_role': 'Conductor',
-      'profile': 'Perfil',
-      'schedules': 'Horarios',
-      'monitoring_center': 'Centro de Monitoreo',
-      'lost_found': 'Objetos Perdidos',
-      'password': 'Contraseña',
-      'information': 'Información',
-      'announcements': 'Comunicados',
-      'regulations': 'Reglamentación',
-      'manual': 'Manual',
-      'logout': 'Cerrar Sesión',
-      
-      // Map
-      'normal': 'Normal',
-      'satellite': 'Satelital',
-      'hybrid': 'Híbrido',
-      
-      // Bottom UI
-      'route_not_selected': 'Ruta no seleccionada',
-      'select_route': 'SELECCIONAR RUTA',
-    },
-    'EN': {
-      // Drawer
-      'driver_role': 'Driver',
-      'profile': 'Profile',
-      'schedules': 'Schedules',
-      'monitoring_center': 'Monitoring Center',
-      'lost_found': 'Lost & Found',
-      'password': 'Password',
-      'information': 'Information',
-      'announcements': 'Announcements',
-      'regulations': 'Regulations',
-      'manual': 'Manual',
-      'logout': 'Log Out',
-      
-      // Map
-      'normal': 'Normal',
-      'satellite': 'Satellite',
-      'hybrid': 'Hybrid',
-      
-      // Bottom UI
-      'route_not_selected': 'Route not selected',
-      'select_route': 'SELECT ROUTE',
-    },
-  };
-
-  String getString(String key) => _localizedValues[_currentLanguage]?[key] ?? key;
-
-  void setLanguage(String lang) {
-    if (_currentLanguage != lang) {
-      _currentLanguage = lang;
-      notifyListeners();
-    }
-  }
+  // Localization removed - moved to LocalizationService
 
   void setMapType(MapType type) {
     _currentMapType = type;
