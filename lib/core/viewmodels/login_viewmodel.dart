@@ -49,21 +49,6 @@ class LoginViewModel extends ChangeNotifier {
 
     notifyListeners();
 
-    /*int newCompany = 0;
-
-    if (trimmed == '1') {
-      newCompany = 1;
-    } else if (trimmed == '2') {
-      newCompany = 2;
-    } else if (trimmed.contains('@')) {
-      newCompany = 2;
-    }
-
-    if (newCompany != _identifiedCompany) {
-      _identifiedCompany = newCompany;
-      notifyListeners();
-      debugPrint('Compañía identificada: $_identifiedCompany');
-    }*/
   }
 
   void _onUserChanged() => identifyCompany(userController.text);
@@ -261,7 +246,6 @@ class LoginViewModel extends ChangeNotifier {
   bool _isProcessing = false;
   bool get isProcessing => _isProcessing;
 
-
   // region RECOVERY PWD
   final formKeyRecoveryPwd = GlobalKey<FormState>();
   final TextEditingController recoveryUserController = TextEditingController();
@@ -320,7 +304,7 @@ class LoginViewModel extends ChangeNotifier {
     }*/
   }
 
-  // region RECOVERY PWD
+  // endregion RECOVERY PWD
   @override
   void dispose() {
     userController.dispose();
