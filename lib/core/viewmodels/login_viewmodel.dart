@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 
 import '../../ui/views/home_view.dart';
 import '../services/language_service.dart';
+import '../services/models/create_new_user_model.dart';
 import '../services/models/domine_validate_model.dart';
+import '../services/models/recovery_pasword_model.dart';
 import '../services/url_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
@@ -66,12 +68,20 @@ class LoginViewModel extends ChangeNotifier {
 
   void _onUserChanged() => identifyCompany(userController.text);
 
-  bool _rememberMe = false;
+  bool _rememberMe = CacheUserSession().isPerduration;
   bool get rememberMe => _rememberMe;
 
   void toggleRememberMe(bool? value) {
     _rememberMe = value ?? false;
+    CacheUserSession().isPerduration = _rememberMe;
+    print("isPerduration => ${CacheUserSession().isPerduration}");
+    perdureSession();
     notifyListeners();
+  }
+
+  void perdureSession(){
+    CacheUserSession().perdureEmail = CacheUserSession().isPerduration? userController.text:"";
+    CacheUserSession().perdurePass = CacheUserSession().isPerduration?  passwordController.text:"";
   }
 
   Future<void> login(BuildContext context) async {
@@ -167,7 +177,9 @@ class LoginViewModel extends ChangeNotifier {
       CacheUserSession().companyEmail = respCompany.datos.first.correos;
       CacheUserSession().userIdCli = respUser.datos.first.id_cli;
       CacheUserSession().isLogin = true;
-
+      perdureSession();
+      userController.text = "";
+      passwordController.text = "";
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeView()),
@@ -178,52 +190,57 @@ class LoginViewModel extends ChangeNotifier {
 
     }
 
-    /*
-    final password = passwordController.text;
-    
-    // Validate based on company/side
-    bool isValid = false;
-    if (_identifiedCompany == 1 && password == '1') {
-      isValid = true;
-    } else if (_identifiedCompany == 2 && (password == '2' || password.isNotEmpty && !_identifiedCompanyIsExplicit)) {
-      // In empresa 2, if it's explicitly '2' or for the general email flow we'll allow any non-empty for now
-      isValid = true;
-    }
-
-    // Explicit check for the user's specific mock case:
-    if (_identifiedCompany == 1 && password != '1') isValid = false;
-    if (_identifiedCompany == 2 && password != '2' && userController.text == '2') isValid = false;
-
-    if (isValid) {
-      debugPrint('Iniciando sesión con Usuario: ${userController.text} para el Lado: $_identifiedCompany');
-      onLoginSuccess(_identifiedCompany);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Contraseña incorrecta para esta empresa. Use "1" para Side 1 o "2" para Side 2.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-     */
   }
 
-  bool get _identifiedCompanyIsExplicit => userController.text == '1' || userController.text == '2';
-
-  final TextEditingController registerNameController = TextEditingController();
-  final TextEditingController registerEmailController = TextEditingController();
-  final TextEditingController recoveryUserController = TextEditingController();
-  final TextEditingController recoveryEmailController = TextEditingController();
-
-  bool _isProcessing = false;
-  bool get isProcessing => _isProcessing;
+  // region CREATE NEW USER
+  final formKeyNewUser = GlobalKey<FormState>();
+  final TextEditingController registerNewCompanyController = TextEditingController();
+  final TextEditingController registerNewUserNameController = TextEditingController();
+  final TextEditingController registerNewEmailController = TextEditingController();
+  final TextEditingController registerNewUserController = TextEditingController();
 
   void registerUser(BuildContext context) async {
-    if (registerNameController.text.isEmpty || registerEmailController.text.isEmpty) {
+
+    if (!formKeyNewUser.currentState!.validate()) {
+      return;
+    }
+
+    try{
+      ResponseNewUser? respNewUser = await callApi.handlingRequestParsed<ResponseNewUser>(
+          urlParam: urlService.getUrlNewUser(),
+          method: "POST",
+          params: {
+            "empresa": registerNewCompanyController.text,
+            "nombre_usuario": registerNewUserNameController.text,
+            "correo": registerNewEmailController.text,
+            "usuario": registerNewUserController.text
+          },
+          fromJson: (json) => ResponseNewUser.fromJson(json)
+      );
+
+      print("respNewUser => $respNewUser");
+
+      if( respNewUser!.respuesta != "registro correcto" ){
+        print("error al crear");
+        return;
+      }
+
+      registerNewCompanyController.clear();
+      registerNewUserNameController.clear();
+      registerNewEmailController.clear();
+      registerNewUserController.clear();
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(language.getString('register_success')) ));
+
+
+    }catch(_){}
+
+    /*if (registerNameController.text.isEmpty || registerEmailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Complete todos los campos')));
       return;
     }
-    
+
     _isProcessing = true;
     notifyListeners();
     await Future.delayed(const Duration(seconds: 2));
@@ -236,13 +253,27 @@ class LoginViewModel extends ChangeNotifier {
       registerNameController.clear();
       registerEmailController.clear();
     }
+     */
   }
 
+  // endregion CREATE NEW USER
+
+  bool _isProcessing = false;
+  bool get isProcessing => _isProcessing;
+
+
+  // region RECOVERY PWD
+  final formKeyRecoveryPwd = GlobalKey<FormState>();
+  final TextEditingController recoveryUserController = TextEditingController();
+  final TextEditingController recoveryEmailController = TextEditingController();
+
   void recoverPassword(BuildContext context) async {
-    if (recoveryUserController.text.isEmpty || recoveryEmailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Complete todos los campos')));
+
+    if( !formKeyRecoveryPwd.currentState!.validate() ) return;
+
+    /*if (recoveryUserController.text.isEmpty || recoveryEmailController.text.isEmpty) {
       return;
-    }
+    }*/
 
     _isProcessing = true;
     notifyListeners();
@@ -250,22 +281,56 @@ class LoginViewModel extends ChangeNotifier {
     _isProcessing = false;
     notifyListeners();
 
-    if (context.mounted) {
+    try{
+
+      ResponseRecoveryPwd? respRecoveryPwd = await callApi.handlingRequestParsed<ResponseRecoveryPwd>(
+        urlParam: urlService.getUrlRecoveryPwd(),
+        params: {
+          "usuario": recoveryUserController.text,
+          "empresa": recoveryEmailController.text
+        },
+        method: 'POST',
+        fromJson: (json){
+          print("respRecoveryPwd-json => $json");
+          return ResponseRecoveryPwd.fromJson(json);
+        }
+      );
+
+      print("respRecoveryPwd => $respRecoveryPwd");
+      print("respRecoveryPwd => ${respRecoveryPwd?.respuesta == null }");
+
+      if( respRecoveryPwd?.respuesta == null || respRecoveryPwd?.respuesta == "error" ){
+        print("Error al recuperar");
+        return;
+      }
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(language.getString('recovery_sent')) ));
+
+
+    }catch(_){
+
+    }
+
+    /*if (context.mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Correo de recuperación enviado')));
       recoveryUserController.clear();
       recoveryEmailController.clear();
-    }
+    }*/
   }
 
+  // region RECOVERY PWD
   @override
   void dispose() {
     userController.dispose();
     passwordController.dispose();
-    registerNameController.dispose();
-    registerEmailController.dispose();
     recoveryUserController.dispose();
     recoveryEmailController.dispose();
+    registerNewCompanyController.dispose();
+    registerNewUserNameController.dispose();
+    registerNewEmailController.dispose();
+    registerNewUserController.dispose();
     super.dispose();
   }
 }

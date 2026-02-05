@@ -22,6 +22,16 @@ class CacheUserSession {
   bool get isCopaair => _prefs?.getBool('isCopaair') ?? false;
   set isCopaair(bool value) => _prefs?.setBool('isCopaair', value);
 
+  bool get isPerduration => _prefs?.getBool('isPerduration') ?? false;
+  set isPerduration(bool value) => _prefs?.setBool('isPerduration', value);
+
+  String get perdureEmail => _prefs?.getString('perdurantEmail') ?? '';
+  set perdureEmail(String value) => _prefs?.setString('perdurantEmail', value);
+
+  String get perdurePass => _prefs?.getString('perdurantPass') ?? '';
+  set perdurePass(String value) => _prefs?.setString('perdurantPass', value);
+
+
   // region COMPANY DATA
   String? get companyLatLog => _prefs?.getString('companyLatLog');
   set companyLatLog(String? value) => _prefs?.setString('companyLatLog', value ?? '');
@@ -43,5 +53,16 @@ class CacheUserSession {
   String? get userIdCli => _prefs?.getString('userIdCli');
   set userIdCli(String? value) => _prefs?.setString('userIdCli', value ?? '');
   // endregion USER DATA
+
+  Future<void> clear() async {
+    isLogin = false;
+    isCopaair = false;
+    companyLatLog = null;
+    companyClave = null;
+    companyImg = null;
+    companyName = null;
+    companyEmail = null;
+    userIdCli = null;
+  }
 
 }

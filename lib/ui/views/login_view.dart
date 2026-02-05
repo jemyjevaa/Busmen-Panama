@@ -7,8 +7,30 @@ import 'package:busmen_panama/ui/views/home_view.dart';
 
 import '../../core/services/cache_user_session.dart';
 
-class LoginView extends StatelessWidget {
+class LoginView extends StatefulWidget {
   const LoginView({super.key});
+
+  @override
+  State<LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<LoginView> {
+
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final viewModel = context.read<LoginViewModel>();
+
+      if (CacheUserSession().isPerduration) {
+        viewModel.userController.text = CacheUserSession().perdureEmail;
+        viewModel.passwordController.text = CacheUserSession().perdurePass;
+      }
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -519,7 +541,7 @@ class LoginView extends StatelessWidget {
                                   ),
                                 ),
                                  */
-                                
+
                                 // Company-specific Actions
                                 if (viewModel.identifiedCompany == 1) ...[
                                   const SizedBox(height: 15),
@@ -575,7 +597,7 @@ class LoginView extends StatelessWidget {
                                         elevation: 0,
                                         padding: const EdgeInsets.symmetric(vertical: 16),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15), 
+                                          borderRadius: BorderRadius.circular(15),
                                           side: BorderSide(color: Colors.grey[300]!)
                                         ),
                                       ),
@@ -716,16 +738,59 @@ class LoginView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              _buildTextField(
-                controller: viewModel.registerNameController, 
-                hint: localization.getString('name_label'), 
-                icon: Icons.person_outline
-              ),
-              const SizedBox(height: 15),
-              _buildTextField(
-                controller: viewModel.registerEmailController, 
-                hint: localization.getString('email_label'), 
-                icon: Icons.email_outlined
+              Form(
+                key: viewModel.formKeyNewUser,
+                child: Column(
+                  children: [
+                    _buildTextField(
+                        controller: viewModel.registerNewCompanyController,
+                        hint: localization.getString('new_user_company'),
+                        icon: Icons.domain,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return localization.getString('fill_all_fields');
+                          }
+                          return null;
+                        },
+                    ),
+                    const SizedBox(height: 20),
+                    _buildTextField(
+                        controller: viewModel.registerNewUserNameController,
+                        hint: localization.getString('user_name_label'),
+                        icon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return localization.getString('fill_all_fields');
+                          }
+                          return null;
+                        },
+                    ),
+                    const SizedBox(height: 15),
+                    _buildTextField(
+                        controller: viewModel.registerNewEmailController,
+                        hint: localization.getString('email_label'),
+                        icon: Icons.email_outlined,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return localization.getString('fill_all_fields');
+                          }
+                          return null;
+                        },
+                    ),
+                    const SizedBox(height: 25),
+                    _buildTextField(
+                        controller: viewModel.registerNewUserController,
+                        hint: localization.getString('user_n_label'),
+                        icon: Icons.person_outline,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return localization.getString('fill_all_fields');
+                          }
+                          return null;
+                        },
+                    ),
+                  ]
+                )
               ),
               const SizedBox(height: 25),
               SizedBox(
@@ -779,16 +844,35 @@ class LoginView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              _buildTextField(
-                controller: viewModel.recoveryUserController, 
-                hint: localization.getString('user_n_label'), 
-                icon: Icons.person_outline
-              ),
-              const SizedBox(height: 15),
-              _buildTextField(
-                controller: viewModel.recoveryEmailController, 
-                hint: localization.getString('email_label'), 
-                icon: Icons.email_outlined
+              Form(
+                key: viewModel.formKeyRecoveryPwd,
+                child: Column(
+                  children: [
+                    _buildTextField(
+                      controller: viewModel.recoveryUserController,
+                      hint: localization.getString('user_n_label'),
+                      icon: Icons.person_outline,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return localization.getString('fill_all_fields');
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 15),
+                    _buildTextField(
+                      controller: viewModel.recoveryEmailController,
+                      hint: localization.getString('email_label'),
+                      icon: Icons.email_outlined,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return localization.getString('fill_all_fields');
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                )
               ),
               const SizedBox(height: 25),
               SizedBox(
