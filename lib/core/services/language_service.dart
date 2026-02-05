@@ -11,7 +11,8 @@ class LanguageService extends ChangeNotifier {
       'pass_label': 'CONTRASEÑA',
       'remember_me': 'Mantener sesión iniciada',
       'login_btn': 'INICIAR SESION',
-      
+      'new_user_company': 'Compañia',
+
       // Drawer
       'driver_role': 'Conductor',
       'profile': 'Perfil',
@@ -93,6 +94,7 @@ class LanguageService extends ChangeNotifier {
       'pass_label': 'PASSWORD',
       'remember_me': 'Stay logged in',
       'login_btn': 'LOG IN',
+      'new_user_company': 'Company',
       
       // Drawer
       'driver_role': 'Driver',

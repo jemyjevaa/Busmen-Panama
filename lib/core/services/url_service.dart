@@ -13,6 +13,9 @@ class UrlService {
   final String _validateDominio  = "validarDominio";
   final String _validateCompany  = "validarempresa";
   final String _validateUser  = "validarusuario";
+  final String _newUser  = "registrarusuarioinvitadotodos";
+  final String _recoveryPwd  = "recuperarpassword";
+
 
   late bool isExisted = nombres.contains(CacheUserSession().isCopaair);
 
@@ -26,6 +29,14 @@ class UrlService {
 
   String getUrlUserValidate(){
     return CacheUserSession().isCopaair? "$_urlBasegGeovoy$_validateUser":"$_urlBaseLectorasPan$_validateUser";
+  }
+
+  String getUrlNewUser(){
+    return "$_urlBasegGeovoy$_newUser";
+  }
+
+  String getUrlRecoveryPwd(){
+    return "$_urlBasegGeovoy$_recoveryPwd";
   }
 
 }

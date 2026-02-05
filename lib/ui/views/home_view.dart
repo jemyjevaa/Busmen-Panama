@@ -8,6 +8,8 @@ import 'package:busmen_panama/ui/views/schedules_view.dart';
 import 'package:busmen_panama/ui/views/lost_found_view.dart';
 import 'package:busmen_panama/ui/views/password_view.dart';
 
+import '../../core/services/cache_user_session.dart';
+
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
@@ -562,6 +564,7 @@ class _HomeViewState extends State<HomeView> {
   Widget _buildLogoutItem(BuildContext context, LanguageService localization) {
     return InkWell(
       onTap: () {
+        CacheUserSession().clear();
         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       },
       borderRadius: BorderRadius.circular(10),
