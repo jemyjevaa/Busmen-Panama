@@ -4,6 +4,7 @@ import 'package:busmen_panama/core/services/models/user_validate_model.dart';
 import 'package:busmen_panama/core/services/request_service.dart';
 import 'package:flutter/material.dart';
 
+import '../../ui/views/home_view.dart';
 import '../services/language_service.dart';
 import '../services/models/domine_validate_model.dart';
 import '../services/url_service.dart';
@@ -73,7 +74,7 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(Function onLoginSuccess, BuildContext context) async {
+  Future<void> login(BuildContext context) async {
 
     if (!formKeyLogin.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -166,7 +167,11 @@ class LoginViewModel extends ChangeNotifier {
       CacheUserSession().companyEmail = respCompany.datos.first.correos;
       CacheUserSession().userIdCli = respUser.datos.first.id_cli;
       CacheUserSession().isLogin = true;
-      onLoginSuccess();
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeView()),
+      );
       // endregion VALIDATE USER
 
     }catch( _ ){

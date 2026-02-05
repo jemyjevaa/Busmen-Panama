@@ -208,10 +208,7 @@ class LoginView extends StatelessWidget {
                                     width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed: () {
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(builder: (context) => const HomeView()),
-                                        );
+                                        viewModel.login(context);
                                       },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFF064DC3),
