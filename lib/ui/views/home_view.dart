@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
-import 'package:busmen_panama/core/services/localization_service.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
 import 'package:busmen_panama/ui/views/profile_view.dart';
 import 'package:busmen_panama/ui/views/schedules_view.dart';
 import 'package:busmen_panama/ui/views/lost_found_view.dart';
@@ -31,7 +31,7 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     // Access the viewmodel
     final viewModel = context.watch<HomeViewModel>();
-    final localization = context.watch<LocalizationService>();
+    final localization = context.watch<LanguageService>();
 
     return Scaffold(
       drawer: _buildDrawer(context, viewModel, localization),
@@ -291,7 +291,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, HomeViewModel viewModel, LocalizationService localization) {
+  Widget _buildDrawer(BuildContext context, HomeViewModel viewModel, LanguageService localization) {
     return Drawer(
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -559,7 +559,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildLogoutItem(BuildContext context, LocalizationService localization) {
+  Widget _buildLogoutItem(BuildContext context, LanguageService localization) {
     return InkWell(
       onTap: () {
         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);

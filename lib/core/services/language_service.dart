@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class LocalizationService extends ChangeNotifier {
+class LanguageService extends ChangeNotifier {
   String _currentLanguage = 'ES';
   String get currentLanguage => _currentLanguage;
 
@@ -84,6 +84,8 @@ class LocalizationService extends ChangeNotifier {
       'register_success': 'Usuario registrado correctamente',
       'recovery_sent': 'Correo de recuperación enviado',
       'no_profile': 'SIN PERFIL',
+      'error_domine':'Correo inválido',
+      'error_user':'Usuario inválido',
     },
     'EN': {
       // Login
@@ -164,6 +166,8 @@ class LocalizationService extends ChangeNotifier {
       'register_success': 'User registered successfully',
       'recovery_sent': 'Recovery email sent',
       'no_profile': 'NO PROFILE',
+      'error_domine':'Please enter a valid email address',
+      'error_user':'Invalid User',
     },
   };
 

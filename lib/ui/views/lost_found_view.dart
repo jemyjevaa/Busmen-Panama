@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
-import 'package:busmen_panama/core/services/localization_service.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
 import 'package:intl/intl.dart';
 
 class LostFoundView extends StatelessWidget {
@@ -10,7 +10,7 @@ class LostFoundView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<LostFoundViewModel>();
-    final localization = context.watch<LocalizationService>();
+    final localization = context.watch<LanguageService>();
 
     return Scaffold(
       backgroundColor: Colors.grey[100],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/schedules_viewmodel.dart';
-import 'package:busmen_panama/core/services/localization_service.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
 
 class SchedulesView extends StatelessWidget {
   const SchedulesView({super.key});
@@ -9,7 +9,7 @@ class SchedulesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<SchedulesViewModel>();
-    final localization = context.watch<LocalizationService>();
+    final localization = context.watch<LanguageService>();
     final schedules = viewModel.schedules;
 
     return Scaffold(
