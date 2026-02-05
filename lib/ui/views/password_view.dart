@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
-import 'package:busmen_panama/core/services/localization_service.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
 
 class PasswordView extends StatelessWidget {
   const PasswordView({super.key});
@@ -9,7 +9,7 @@ class PasswordView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<PasswordViewModel>();
-    final localization = context.watch<LocalizationService>();
+    final localization = context.watch<LanguageService>();
 
     return Scaffold(
       backgroundColor: Colors.grey[100],

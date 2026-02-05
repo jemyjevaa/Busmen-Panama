@@ -1,3 +1,4 @@
+import 'package:busmen_panama/ui/views/home_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
@@ -7,9 +8,12 @@ import 'package:busmen_panama/core/viewmodels/profile_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/schedules_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
-import 'package:busmen_panama/core/services/localization_service.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
+
+import 'core/services/cache_user_session.dart';
 
 void main() {
+
   runApp(
     MultiProvider(
       providers: [
@@ -19,7 +23,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => SchedulesViewModel()),
         ChangeNotifierProvider(create: (_) => LostFoundViewModel()),
         ChangeNotifierProvider(create: (_) => PasswordViewModel()),
-        ChangeNotifierProvider(create: (_) => LocalizationService()),
+        ChangeNotifierProvider(create: (_) => LanguageService()),
       ],
       child: const MyApp(),
     ),
@@ -31,6 +35,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    CacheUserSession().init();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Busmen Panama',
@@ -38,7 +45,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0C13A2)),
         useMaterial3: true,
       ),
-      home: const LoginView(),
+      home:CacheUserSession().isLogin? const HomeView() :const LoginView(),
     );
   }
 }

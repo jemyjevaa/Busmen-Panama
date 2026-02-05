@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/login_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
-import 'package:busmen_panama/core/services/localization_service.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
 import 'package:busmen_panama/ui/views/home_view.dart';
+
+import '../../core/services/cache_user_session.dart';
 
 class LoginView extends StatelessWidget {
   const LoginView({super.key});
@@ -12,7 +14,7 @@ class LoginView extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final viewModel = context.watch<LoginViewModel>();
-    final localization = context.watch<LocalizationService>();
+    final localization = context.watch<LanguageService>();
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
@@ -65,6 +67,280 @@ class LoginView extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Form(
+                              key: viewModel.formKeyLogin,
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              child: Column(
+                                children: [
+                                  // User Label
+                                  Text(
+                                    localization.getString('user_label'),
+                                    style: const TextStyle(
+                                      color: Color(0xFF064DC3),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildTextField(
+                                    controller: viewModel.userController,
+                                    hint: localization.getString('user_label'),
+                                    icon: Icons.person_outline,
+                                    isSuccess: viewModel.identifiedCompany != 0,
+                                    onChanged: viewModel.identifyCompany, // Reliability fix
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return localization.getString('fill_all_fields');
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  Text(
+                                    localization.getString('pass_label'),
+                                    style: const TextStyle(
+                                      color: Color(0xFF064DC3),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildTextField(
+                                    controller: viewModel.passwordController,
+                                    hint: localization.getString('pass_label'),
+                                    icon: Icons.lock_outline,
+                                    isPassword: true,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return localization.getString('fill_all_fields');
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 30),
+
+                                  /*if (viewModel.identifiedCompany != 0) ...[
+                              // Password Section (Visible only if company identified)
+                              Text(
+                                localization.getString('pass_label'),
+                                style: const TextStyle(
+                                  color: Color(0xFF064DC3),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildTextField(
+                                controller: viewModel.passwordController,
+                                hint: localization.getString('pass_label'),
+                                icon: Icons.lock_outline,
+                                isPassword: true,
+                              ),
+                              const SizedBox(height: 30),
+                            ],
+                             */
+
+                                  // Remember Me & Language (Always visible)
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Theme(
+                                          data: Theme.of(context).copyWith(
+                                            unselectedWidgetColor: Colors.grey[400],
+                                          ),
+                                          child: CheckboxListTile(
+                                            value: viewModel.rememberMe,
+                                            onChanged: viewModel.toggleRememberMe,
+                                            title: Text(
+                                              localization.getString('remember_me'),
+                                              style: const TextStyle(
+                                                color: Color(0xFF555555),
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            controlAffinity: ListTileControlAffinity.leading,
+                                            contentPadding: EdgeInsets.zero,
+                                            activeColor: const Color(0xFF064DC3),
+                                            dense: true,
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.all(3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.grey[300]!),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            _buildLanguageOption(
+                                              context,
+                                              'ES',
+                                              localization.currentLanguage == 'ES',
+                                                  () {
+                                                        localization.setLanguage('ES');
+                                                        viewModel.language.setLanguage('ES');
+                                                  },
+                                            ),
+                                            _buildLanguageOption(
+                                              context,
+                                              'EN',
+                                              localization.currentLanguage == 'EN',
+                                                  () {
+                                                localization.setLanguage('EN');
+                                                viewModel.language.setLanguage('EN');
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 30),
+                                  // Login Button (Shared)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const HomeView()),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF064DC3),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(15),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                      child: Text(
+                                        localization.getString('login_btn'),
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  if ( CacheUserSession().isCopaair ) ...[
+                                    /*
+                                const SizedBox(height: 30),
+                                // Login Button (Shared)
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      viewModel.login((side) {
+                                        context.read<HomeViewModel>().setSide(side);
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const HomeView()),
+                                        );
+                                      }, context);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF064DC3),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                    child: Text(
+                                      localization.getString('login_btn'),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                 */
+
+                                    // Company-specific Actions
+                                    if (viewModel.identifiedCompany == 1) ...[
+                                      const SizedBox(height: 15),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            // QR logic placeholder
+                                          },
+                                          icon: const Icon(Icons.qr_code_scanner),
+                                          label: const Text(
+                                            "ESCANEAR CÓDIGO QR",
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.white,
+                                            foregroundColor: const Color(0xFF064DC3),
+                                            side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                            elevation: 0,
+                                          ),
+                                        ),
+                                      ),
+                                    ] else if (CacheUserSession().isCopaair) ...[
+                                      const SizedBox(height: 15),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: () => _showRegisterSheet(context, viewModel, localization),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.white,
+                                            foregroundColor: const Color(0xFF064DC3),
+                                            side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                            elevation: 0,
+                                          ),
+                                          child: Text(
+                                            localization.getString('register'),
+                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 15),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton(
+                                          onPressed: () => _showRecoverySheet(context, viewModel, localization),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: Colors.grey[700],
+                                            elevation: 0,
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(15),
+                                                side: BorderSide(color: Colors.grey[300]!)
+                                            ),
+                                          ),
+                                          child: Text(
+                                            localization.getString('forgot_password'),
+                                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ],
+                              ),
+                            )
+                          ],
+                          /*children: [
                             // User Label
                             Text(
                               localization.getString('user_label'),
@@ -85,7 +361,25 @@ class LoginView extends StatelessWidget {
                             ),
                             const SizedBox(height: 10),
 
-                            if (viewModel.identifiedCompany != 0) ...[
+                            Text(
+                              localization.getString('pass_label'),
+                              style: const TextStyle(
+                                color: Color(0xFF064DC3),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.0,
+                                ),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildTextField(
+                              controller: viewModel.passwordController,
+                              hint: localization.getString('pass_label'),
+                              icon: Icons.lock_outline,
+                              isPassword: true,
+                            ),
+                            const SizedBox(height: 30),
+
+                            /*if (viewModel.identifiedCompany != 0) ...[
                               // Password Section (Visible only if company identified)
                               Text(
                                 localization.getString('pass_label'),
@@ -105,6 +399,7 @@ class LoginView extends StatelessWidget {
                               ),
                               const SizedBox(height: 30),
                             ],
+                             */
 
                               // Remember Me & Language (Always visible)
                               Row(
@@ -157,8 +452,42 @@ class LoginView extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              
-                              if (viewModel.identifiedCompany != 0) ...[
+
+                              const SizedBox(height: 30),
+                              // Login Button (Shared)
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    viewModel.login((side) {
+                                      context.read<HomeViewModel>().setSide(side);
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const HomeView()),
+                                      );
+                                    }, context);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF064DC3),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  child: Text(
+                                    localization.getString('login_btn'),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if ( CacheUserSession().isCopaair ) ...[
+                                /*
                                 const SizedBox(height: 30),
                                 // Login Button (Shared)
                                 SizedBox(
@@ -192,6 +521,7 @@ class LoginView extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                                 */
                                 
                                 // Company-specific Actions
                                 if (viewModel.identifiedCompany == 1) ...[
@@ -217,7 +547,7 @@ class LoginView extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                ] else if (viewModel.identifiedCompany == 2) ...[
+                                ] else if (CacheUserSession().isCopaair) ...[
                                   const SizedBox(height: 15),
                                   SizedBox(
                                     width: double.infinity,
@@ -260,7 +590,7 @@ class LoginView extends StatelessWidget {
                                   ),
                                 ],
                               ],
-                            ],
+                            ],*/
                           ),
                         ),
                         
@@ -309,20 +639,15 @@ class LoginView extends StatelessWidget {
     bool isPassword = false,
     bool isSuccess = false,
     Function(String)? onChanged,
+    String? Function(String?)? validator,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSuccess ? Colors.green : Colors.grey[200]!, 
-          width: 1.5
-        ),
-      ),
-      child: TextField(
+      margin: const EdgeInsets.only(bottom: 5),
+      child: TextFormField(
         controller: controller,
         obscureText: isPassword,
         onChanged: onChanged,
+        validator: validator,
         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           hintText: hint,
@@ -333,14 +658,43 @@ class LoginView extends StatelessWidget {
           ),
           prefixIcon: Icon(icon, color: const Color(0xFF064DC3), size: 20),
           suffixIcon: isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null,
-          border: InputBorder.none,
+          filled: true,
+          fillColor: Colors.grey[50],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isSuccess ? Colors.green : Colors.grey[200]!, 
+              width: 1.5
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: isSuccess ? Colors.green : Colors.grey[200]!, 
+              width: 1.5
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Color(0xFF064DC3), 
+              width: 1.5
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+              color: Colors.red, 
+              width: 1.5
+            ),
+          ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );
   }
 
-  void _showRegisterSheet(BuildContext context, LoginViewModel viewModel, LocalizationService localization) {
+  void _showRegisterSheet(BuildContext context, LoginViewModel viewModel, LanguageService localization) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -403,7 +757,7 @@ class LoginView extends StatelessWidget {
     );
   }
 
-  void _showRecoverySheet(BuildContext context, LoginViewModel viewModel, LocalizationService localization) {
+  void _showRecoverySheet(BuildContext context, LoginViewModel viewModel, LanguageService localization) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
