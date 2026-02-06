@@ -184,19 +184,19 @@ class LoginViewModel extends ChangeNotifier {
       // userController.text = "";
       // passwordController.text = "";
 
-      scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-          content: Text(language.getString('error_domine')),
-          backgroundColor: Colors.red,
-        ),
-      );
-      loadingLogIn = !loadingLogIn;
-      notifyListeners();
       if (context.mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeView()),
         );
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(language.getString('welcome')),
+            backgroundColor: Colors.green,
+          ),
+        );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
       }
       // endregion VALIDATE USER
 

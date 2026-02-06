@@ -1,3 +1,4 @@
+import 'package:busmen_panama/ui/views/announcements_view.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -468,10 +469,16 @@ class _HomeViewState extends State<HomeView> {
                     trailing: const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
                     childrenPadding: EdgeInsets.zero,
                     children: [
+                      // working
                       _buildSubMenuItem(
                         localization.getString('announcements'),
                         icon: Icons.campaign_outlined,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AnnouncementsView()),
+                          );
+                        },
                       ),
                       _buildSubMenuItem(
                         localization.getString('regulations'),

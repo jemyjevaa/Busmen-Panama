@@ -12,6 +12,7 @@ class LanguageService extends ChangeNotifier {
       'remember_me': 'Mantener sesión iniciada',
       'login_btn': 'INICIAR SESION',
       'new_user_company': 'Compañia',
+      'welcome': 'Entrando...',
 
       // Drawer
       'driver_role': 'Conductor',
@@ -22,6 +23,7 @@ class LanguageService extends ChangeNotifier {
       'password': 'Contraseña',
       'information': 'Información',
       'announcements': 'Comunicados',
+      'announcements_found': 'No hay comunicados disponibles en este momento.',
       'regulations': 'Reglamentación',
       'manual': 'Manual',
       'logout': 'Cerrar Sesión',
@@ -97,6 +99,7 @@ class LanguageService extends ChangeNotifier {
       'remember_me': 'Stay logged in',
       'login_btn': 'LOG IN',
       'new_user_company': 'Company',
+      'welcome': 'Signing in…',
       
       // Drawer
       'driver_role': 'Driver',
@@ -107,6 +110,7 @@ class LanguageService extends ChangeNotifier {
       'password': 'Password',
       'information': 'Information',
       'announcements': 'Announcements',
+      'announcements_found': 'There are no announcements available at this time',
       'regulations': 'Regulations',
       'manual': 'Manual',
       'logout': 'Log Out',

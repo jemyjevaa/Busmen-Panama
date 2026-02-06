@@ -12,6 +12,7 @@ import 'package:busmen_panama/core/services/language_service.dart';
 
 import 'app_globals.dart';
 import 'core/services/cache_user_session.dart';
+import 'core/viewmodels/announcements_viewmodel.dart';
 
 void main() {
 
@@ -25,6 +26,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => LostFoundViewModel()),
         ChangeNotifierProvider(create: (_) => PasswordViewModel()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
+        ChangeNotifierProvider(create: (_) => AnnouncementsViewModel()),
       ],
       child: const MyApp(),
     ),
