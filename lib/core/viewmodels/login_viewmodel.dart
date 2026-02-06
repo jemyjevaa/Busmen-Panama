@@ -24,7 +24,7 @@ class LoginViewModel extends ChangeNotifier {
   RequestService callApi = RequestService.instance;
 
 
-  int _identifiedCompany = 0; // 0: None, 1: Empresa 1, 2: Empresa 2
+  final int _identifiedCompany = 0; // 0: None, 1: Empresa 1, 2: Empresa 2
   int get identifiedCompany => _identifiedCompany;
 
   bool isOtherDomine = false;
