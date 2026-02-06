@@ -4,6 +4,7 @@ import 'package:busmen_panama/core/services/models/user_validate_model.dart';
 import 'package:busmen_panama/core/services/request_service.dart';
 import 'package:flutter/material.dart';
 
+import '../../app_globals.dart';
 import '../../ui/views/home_view.dart';
 import '../services/language_service.dart';
 import '../services/models/create_new_user_model.dart';
@@ -21,11 +22,15 @@ class LoginViewModel extends ChangeNotifier {
 
   UrlService urlService = UrlService();
   RequestService callApi = RequestService.instance;
-  
+
+
   int _identifiedCompany = 0; // 0: None, 1: Empresa 1, 2: Empresa 2
   int get identifiedCompany => _identifiedCompany;
 
   bool isOtherDomine = false;
+  bool loadingLogIn = false;
+  bool loadingCreateUser = false;
+  bool loadingRecoveryPwd = false;
 
   LoginViewModel() {
     // Keep listener as backup, but we'll use direct calls for better reliability
@@ -59,7 +64,7 @@ class LoginViewModel extends ChangeNotifier {
   void toggleRememberMe(bool? value) {
     _rememberMe = value ?? false;
     CacheUserSession().isPerduration = _rememberMe;
-    print("isPerduration => ${CacheUserSession().isPerduration}");
+    // print("isPerduration => ${CacheUserSession().isPerduration}");
     perdureSession();
     notifyListeners();
   }
@@ -71,13 +76,18 @@ class LoginViewModel extends ChangeNotifier {
 
   Future<void> login(BuildContext context) async {
 
+    loadingLogIn = !loadingLogIn;
+    notifyListeners();
+
     if (!formKeyLogin.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(
           content: Text(language.getString('fill_all_fields')),
           backgroundColor: Colors.red,
         ),
       );
+      loadingLogIn = !loadingLogIn;
+      notifyListeners();
       return;
     }
 
@@ -95,13 +105,15 @@ class LoginViewModel extends ChangeNotifier {
 
       print("respDomine => ${respDomine}");
 
-      if( respDomine!.respuesta != "correcto" ){
-        ScaffoldMessenger.of(context).showSnackBar(
+      if( respDomine == null || respDomine.respuesta != "correcto" ){
+        scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(language.getString('error_domine')),
             backgroundColor: Colors.red,
           ),
         );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
         return;
       }
       // endregion VALIDATE DOMINE
@@ -119,13 +131,15 @@ class LoginViewModel extends ChangeNotifier {
 
       print("respCompany => $respCompany");
 
-      if( respCompany!.respuesta != "existe" ){
-        ScaffoldMessenger.of(context).showSnackBar(
+      if( respCompany == null || respCompany.respuesta != "existe" ){
+        scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(language.getString('error_domine')),
             backgroundColor: Colors.red,
           ),
         );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
         return;
       }
       // endregion VALIDATE COMPANY
@@ -145,13 +159,16 @@ class LoginViewModel extends ChangeNotifier {
         }
       );
       print("respUser => ${respUser?.respuesta}");
-      if( respUser!.respuesta != "existe" ){
-        ScaffoldMessenger.of(context).showSnackBar(
+      
+      if( respUser == null || respUser.respuesta != "existe" ){
+        scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(language.getString('error_user')),
             backgroundColor: Colors.red,
           ),
         );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
         return;
       }
 
@@ -161,18 +178,40 @@ class LoginViewModel extends ChangeNotifier {
       CacheUserSession().companyName = respCompany.datos.first.nombre;
       CacheUserSession().companyEmail = respCompany.datos.first.correos;
       CacheUserSession().userIdCli = respUser.datos.first.id_cli;
+      CacheUserSession().userEmail = userController.text;
       CacheUserSession().isLogin = true;
       perdureSession();
-      userController.text = "";
-      passwordController.text = "";
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeView()),
+      // userController.text = "";
+      // passwordController.text = "";
+
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(language.getString('error_domine')),
+          backgroundColor: Colors.red,
+        ),
       );
+      loadingLogIn = !loadingLogIn;
+      notifyListeners();
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeView()),
+        );
+      }
       // endregion VALIDATE USER
 
-    }catch( _ ){
-
+    }catch( e ){
+      loadingLogIn = !loadingLogIn;
+      notifyListeners();
+      print("Login error: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(language.getString('error_user')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
 
   }
@@ -185,7 +224,7 @@ class LoginViewModel extends ChangeNotifier {
   final TextEditingController registerNewUserController = TextEditingController();
 
   void registerUser(BuildContext context) async {
-
+    hideKeyboard(context);
     if (!formKeyNewUser.currentState!.validate()) {
       return;
     }
@@ -205,8 +244,16 @@ class LoginViewModel extends ChangeNotifier {
 
       print("respNewUser => $respNewUser");
 
-      if( respNewUser!.respuesta != "registro correcto" ){
+      if( respNewUser == null || respNewUser.respuesta != "registro correcto" ){
         print("error al crear");
+        Navigator.pop(context);
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(language.getString('register_error')),
+            backgroundColor: Colors.red,
+          ),
+        );
+
         return;
       }
 
@@ -216,29 +263,17 @@ class LoginViewModel extends ChangeNotifier {
       registerNewUserController.clear();
 
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(language.getString('register_success')) ));
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(language.getString('register_success')),
+          backgroundColor: Colors.green,
+        ),
+      );
 
 
-    }catch(_){}
-
-    /*if (registerNameController.text.isEmpty || registerEmailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Complete todos los campos')));
-      return;
+    }catch(e){
+      print("Register error: $e");
     }
-
-    _isProcessing = true;
-    notifyListeners();
-    await Future.delayed(const Duration(seconds: 2));
-    _isProcessing = false;
-    notifyListeners();
-
-    if (context.mounted) {
-      Navigator.pop(context); // Close sheet
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Usuario registrado correctamente')));
-      registerNameController.clear();
-      registerEmailController.clear();
-    }
-     */
   }
 
   // endregion CREATE NEW USER
@@ -252,12 +287,8 @@ class LoginViewModel extends ChangeNotifier {
   final TextEditingController recoveryEmailController = TextEditingController();
 
   void recoverPassword(BuildContext context) async {
-
+    hideKeyboard(context);
     if( !formKeyRecoveryPwd.currentState!.validate() ) return;
-
-    /*if (recoveryUserController.text.isEmpty || recoveryEmailController.text.isEmpty) {
-      return;
-    }*/
 
     _isProcessing = true;
     notifyListeners();
@@ -281,30 +312,35 @@ class LoginViewModel extends ChangeNotifier {
       );
 
       print("respRecoveryPwd => $respRecoveryPwd");
-      print("respRecoveryPwd => ${respRecoveryPwd?.respuesta == null }");
 
-      if( respRecoveryPwd?.respuesta == null || respRecoveryPwd?.respuesta == "error" ){
+      if( respRecoveryPwd == null || respRecoveryPwd.respuesta == "error" ){
         print("Error al recuperar");
+        Navigator.pop(context);
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(language.getString('recovery_sent_error')),
+            backgroundColor: Colors.red,
+          ),
+        );
         return;
       }
 
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar( SnackBar(content: Text(language.getString('recovery_sent')) ));
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(language.getString('recovery_sent')),
+          backgroundColor: Colors.green,
+        ),
+      );
 
 
-    }catch(_){
-
+    }catch(e){
+      print("Recovery error: $e");
     }
-
-    /*if (context.mounted) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Correo de recuperación enviado')));
-      recoveryUserController.clear();
-      recoveryEmailController.clear();
-    }*/
   }
 
   // endregion RECOVERY PWD
+
   @override
   void dispose() {
     userController.dispose();

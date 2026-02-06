@@ -10,6 +10,7 @@ import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
 
+import 'app_globals.dart';
 import 'core/services/cache_user_session.dart';
 
 void main() {
@@ -41,6 +42,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Busmen Panama',
+      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0C13A2)),
         useMaterial3: true,

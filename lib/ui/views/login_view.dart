@@ -5,6 +5,7 @@ import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
 import 'package:busmen_panama/ui/views/home_view.dart';
 
+import '../../app_globals.dart';
 import '../../core/services/cache_user_session.dart';
 
 class LoginView extends StatefulWidget {
@@ -204,10 +205,15 @@ class _LoginViewState extends State<LoginView> {
 
                                   const SizedBox(height: 30),
                                   // Login Button (Shared)
-                                  SizedBox(
+                                  viewModel.loadingLogIn?
+                                      Center(
+                                      child: CircularProgressIndicator(),
+                                      )
+                                      :SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed: () {
+                                        hideKeyboard(context);
                                         viewModel.login(context);
                                       },
                                       style: ElevatedButton.styleFrom(

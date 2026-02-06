@@ -15,6 +15,7 @@ class UrlService {
   final String _validateUser  = "validarusuario";
   final String _newUser  = "registrarusuarioinvitadotodos";
   final String _recoveryPwd  = "recuperarpassword";
+  final String _changePwd  = "cambiopassword";
 
 
   late bool isExisted = nombres.contains(CacheUserSession().isCopaair);
@@ -37,6 +38,10 @@ class UrlService {
 
   String getUrlRecoveryPwd(){
     return "$_urlBasegGeovoy$_recoveryPwd";
+  }
+
+  String getUrlChangePwd(){
+    return "$_urlBaseLectorasPan$_changePwd";
   }
 
 }
