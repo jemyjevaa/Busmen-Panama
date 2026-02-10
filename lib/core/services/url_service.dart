@@ -28,7 +28,6 @@ class UrlService {
   final String _newUser  = "registrarusuarioinvitadotodos";
   final String _recoveryPwd  = "recuperarpassword";
   final String _changePwd  = "cambiopassword";
-  final String _flyer  = "infotipoflyers";
 
 
   late bool isExisted = nombres.contains(CacheUserSession().isCopaair);
@@ -79,7 +78,7 @@ class UrlService {
 
   // region INFORMATION
   String getUrlAnnouncements(){
-    return CacheUserSession().isCopaair? "$_urlBasegGeovoy$_flyer":"$_urlBaseLectorasPan$_flyer";
+    return CacheUserSession().isCopaair? "$_urlBasegGeovoy$_infoFlyers":"$_urlBaseLectorasPan$_infoFlyers";
   }
   // endregion INFORMATION
 
