@@ -1,38 +1,38 @@
-class ResponseAnnouncements{
+class ResponseFlyer{
   final String respuesta;
-  final List<ResponseAnnouncementsData> datos;
+  final List<ResponseFlyerData> datos;
 
-  ResponseAnnouncements({
+  ResponseFlyer({
     required this.respuesta,
     required this.datos,
   });
 
-  factory ResponseAnnouncements.fromJson(Map<String, dynamic> json) {
-    return ResponseAnnouncements(
+  factory ResponseFlyer.fromJson(Map<String, dynamic> json) {
+    return ResponseFlyer(
       respuesta: json['respuesta'],
       datos:json['respuesta'] != "correcto"? []:(json['datos'] as List?)
-              ?.map((item) => ResponseAnnouncementsData.fromJson(item))
+              ?.map((item) => ResponseFlyerData.fromJson(item))
               .toList() ?? []
     );
   }
 
 }
 
-class ResponseAnnouncementsData{
+class ResponseFlyerData{
   final String nombre;
   final String url;
   final String fecha_alta;
   final bool status;
 
-  ResponseAnnouncementsData({
+  ResponseFlyerData({
     required this.nombre,
     required this.url,
     required this.fecha_alta,
     required this.status
   });
 
-  factory ResponseAnnouncementsData.fromJson(Map<String, dynamic> json) {
-    return ResponseAnnouncementsData(
+  factory ResponseFlyerData.fromJson(Map<String, dynamic> json) {
+    return ResponseFlyerData(
         nombre: json["nombre"],
         url: json["url"],
         fecha_alta: json["fecha_alta"],

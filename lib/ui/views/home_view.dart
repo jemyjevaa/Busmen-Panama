@@ -1,5 +1,6 @@
 import 'package:busmen_panama/ui/views/announcements_view.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
+import 'package:busmen_panama/ui/views/regulation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -469,7 +470,6 @@ class _HomeViewState extends State<HomeView> {
                     trailing: const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
                     childrenPadding: EdgeInsets.zero,
                     children: [
-                      // working
                       _buildSubMenuItem(
                         localization.getString('announcements'),
                         icon: Icons.campaign_outlined,
@@ -479,11 +479,16 @@ class _HomeViewState extends State<HomeView> {
                             MaterialPageRoute(builder: (context) => const AnnouncementsView()),
                           );
                         },
-                      ),
+                      ),// working
                       _buildSubMenuItem(
                         localization.getString('regulations'),
                         icon: Icons.gavel_outlined,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegulationView()),
+                          );
+                        },
                       ),
                       _buildSubMenuItem(
                         localization.getString('manual'),
