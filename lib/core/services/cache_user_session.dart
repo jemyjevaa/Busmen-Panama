@@ -52,6 +52,9 @@ class CacheUserSession {
   // region USER DATA
   String? get userIdCli => _prefs?.getString('userIdCli');
   set userIdCli(String? value) => _prefs?.setString('userIdCli', value ?? '');
+
+  String? get userEmail => _prefs?.getString('userEmail');
+  set userEmail(String? value) => _prefs?.setString('userEmail', value ?? '');
   // endregion USER DATA
 
   Future<void> clear() async {

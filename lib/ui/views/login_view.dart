@@ -1,11 +1,13 @@
+import 'package:busmen_panama/ui/widget/recovery_password_button.dart';
+import 'package:busmen_panama/ui/widget/registre_button.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/login_viewmodel.dart';
-import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
-import 'package:busmen_panama/ui/views/home_view.dart';
 
+import '../../app_globals.dart';
 import '../../core/services/cache_user_session.dart';
+import '../widget/text_field.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -38,6 +40,7 @@ class _LoginViewState extends State<LoginView> {
     final viewModel = context.watch<LoginViewModel>();
     final localization = context.watch<LanguageService>();
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -105,7 +108,7 @@ class _LoginViewState extends State<LoginView> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  _buildTextField(
+                                  buildTextField(
                                     controller: viewModel.userController,
                                     hint: localization.getString('user_label'),
                                     icon: Icons.person_outline,
@@ -130,7 +133,7 @@ class _LoginViewState extends State<LoginView> {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  _buildTextField(
+                                  buildTextField(
                                     controller: viewModel.passwordController,
                                     hint: localization.getString('pass_label'),
                                     icon: Icons.lock_outline,
@@ -204,10 +207,15 @@ class _LoginViewState extends State<LoginView> {
 
                                   const SizedBox(height: 30),
                                   // Login Button (Shared)
-                                  SizedBox(
+                                  viewModel.loadingLogIn?
+                                      Center(
+                                      child: CircularProgressIndicator(),
+                                      )
+                                      :SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed: () {
+                                        hideKeyboard(context);
                                         viewModel.login(context);
                                       },
                                       style: ElevatedButton.styleFrom(
@@ -256,44 +264,15 @@ class _LoginViewState extends State<LoginView> {
                                       ),
                                     ] else if (CacheUserSession().isCopaair) ...[
                                       const SizedBox(height: 15),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton(
-                                          onPressed: () => _showRegisterSheet(context, viewModel, localization),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white,
-                                            foregroundColor: const Color(0xFF064DC3),
-                                            side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                            elevation: 0,
-                                          ),
-                                          child: Text(
-                                            localization.getString('register'),
-                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
-                                          ),
-                                        ),
+                                      RegisterButton(
+                                        viewModel: viewModel,
+                                        localization: localization,
                                       ),
+
                                       const SizedBox(height: 15),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton(
-                                          onPressed: () => _showRecoverySheet(context, viewModel, localization),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            foregroundColor: Colors.grey[700],
-                                            elevation: 0,
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(15),
-                                                side: BorderSide(color: Colors.grey[300]!)
-                                            ),
-                                          ),
-                                          child: Text(
-                                            localization.getString('forgot_password'),
-                                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                          ),
-                                        ),
+                                      RecoveryButton(
+                                          viewModel: viewModel,
+                                          localization: localization
                                       ),
                                     ],
                                   ],
@@ -342,253 +321,4 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    bool isPassword = false,
-    bool isSuccess = false,
-    Function(String)? onChanged,
-    String? Function(String?)? validator,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 5),
-      child: TextFormField(
-        controller: controller,
-        obscureText: isPassword,
-        onChanged: onChanged,
-        validator: validator,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-          ),
-          prefixIcon: Icon(icon, color: const Color(0xFF064DC3), size: 20),
-          suffixIcon: isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null,
-          filled: true,
-          fillColor: Colors.grey[50],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: isSuccess ? Colors.green : Colors.grey[200]!, 
-              width: 1.5
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: isSuccess ? Colors.green : Colors.grey[200]!, 
-              width: 1.5
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: Color(0xFF064DC3), 
-              width: 1.5
-            ),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: Colors.red, 
-              width: 1.5
-            ),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-      ),
-    );
-  }
-
-  void _showRegisterSheet(BuildContext context, LoginViewModel viewModel, LanguageService localization) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                localization.getString('create_account'),
-                style: const TextStyle(
-                  fontSize: 20, 
-                  fontWeight: FontWeight.bold, 
-                  color: Color(0xFF064DC3),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Form(
-                key: viewModel.formKeyNewUser,
-                child: Column(
-                  children: [
-                    _buildTextField(
-                        controller: viewModel.registerNewCompanyController,
-                        hint: localization.getString('new_user_company'),
-                        icon: Icons.domain,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return localization.getString('fill_all_fields');
-                          }
-                          return null;
-                        },
-                    ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                        controller: viewModel.registerNewUserNameController,
-                        hint: localization.getString('user_name_label'),
-                        icon: Icons.person_outline,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return localization.getString('fill_all_fields');
-                          }
-                          return null;
-                        },
-                    ),
-                    const SizedBox(height: 15),
-                    _buildTextField(
-                        controller: viewModel.registerNewEmailController,
-                        hint: localization.getString('email_label'),
-                        icon: Icons.email_outlined,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return localization.getString('fill_all_fields');
-                          }
-                          return null;
-                        },
-                    ),
-                    const SizedBox(height: 25),
-                    _buildTextField(
-                        controller: viewModel.registerNewUserController,
-                        hint: localization.getString('user_n_label'),
-                        icon: Icons.person_outline,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return localization.getString('fill_all_fields');
-                          }
-                          return null;
-                        },
-                    ),
-                  ]
-                )
-              ),
-              const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => viewModel.registerUser(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF064DC3),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  child: viewModel.isProcessing 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text(localization.getString('register_btn'), style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(localization.getString('back_btn'), style: TextStyle(color: Colors.grey[600])),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showRecoverySheet(BuildContext context, LoginViewModel viewModel, LanguageService localization) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-          ),
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                localization.getString('recover_access'),
-                style: const TextStyle(
-                  fontSize: 20, 
-                  fontWeight: FontWeight.bold, 
-                  color: Color(0xFF064DC3),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Form(
-                key: viewModel.formKeyRecoveryPwd,
-                child: Column(
-                  children: [
-                    _buildTextField(
-                      controller: viewModel.recoveryUserController,
-                      hint: localization.getString('user_n_label'),
-                      icon: Icons.person_outline,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return localization.getString('fill_all_fields');
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    _buildTextField(
-                      controller: viewModel.recoveryEmailController,
-                      hint: localization.getString('email_label'),
-                      icon: Icons.email_outlined,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return localization.getString('fill_all_fields');
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                )
-              ),
-              const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => viewModel.recoverPassword(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF064DC3),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  child: viewModel.isProcessing 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text(localization.getString('send_btn'), style: const TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(localization.getString('cancel_btn'), style: TextStyle(color: Colors.grey[600])),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

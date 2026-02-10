@@ -1,3 +1,6 @@
+import 'package:busmen_panama/ui/views/announcements_view.dart';
+import 'package:busmen_panama/ui/views/login_view.dart';
+import 'package:busmen_panama/ui/views/regulation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -294,6 +297,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildDrawer(BuildContext context, HomeViewModel viewModel, LanguageService localization) {
+
     return Drawer(
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -387,6 +391,8 @@ class _HomeViewState extends State<HomeView> {
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
               children: [
                 if (viewModel.userSide == 1) ...[
+
+                  CacheUserSession().isCopaair? const SizedBox():
                   _buildDrawerItem(
                     icon: Icons.person_outline,
                     title: localization.getString('profile'),
@@ -467,12 +473,22 @@ class _HomeViewState extends State<HomeView> {
                       _buildSubMenuItem(
                         localization.getString('announcements'),
                         icon: Icons.campaign_outlined,
-                        onTap: () {},
-                      ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AnnouncementsView()),
+                          );
+                        },
+                      ),// working
                       _buildSubMenuItem(
                         localization.getString('regulations'),
                         icon: Icons.gavel_outlined,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegulationView()),
+                          );
+                        },
                       ),
                       _buildSubMenuItem(
                         localization.getString('manual'),
@@ -565,7 +581,10 @@ class _HomeViewState extends State<HomeView> {
     return InkWell(
       onTap: () {
         CacheUserSession().clear();
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginView()),
+        );
       },
       borderRadius: BorderRadius.circular(10),
       child: Container(
@@ -596,10 +615,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildCircleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildCircleButton({ required IconData icon, required VoidCallback onTap, }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

@@ -15,6 +15,8 @@ class UrlService {
   final String _validateUser  = "validarusuario";
   final String _newUser  = "registrarusuarioinvitadotodos";
   final String _recoveryPwd  = "recuperarpassword";
+  final String _changePwd  = "cambiopassword";
+  final String _flyer  = "infotipoflyers";
 
 
   late bool isExisted = nombres.contains(CacheUserSession().isCopaair);
@@ -38,5 +40,15 @@ class UrlService {
   String getUrlRecoveryPwd(){
     return "$_urlBasegGeovoy$_recoveryPwd";
   }
+
+  String getUrlChangePwd(){
+    return "$_urlBaseLectorasPan$_changePwd";
+  }
+
+  // region INFORMATION
+  String getUrlAnnouncements(){
+    return CacheUserSession().isCopaair? "$_urlBasegGeovoy$_flyer":"$_urlBaseLectorasPan$_flyer";
+  }
+  // endregion INFORMATION
 
 }

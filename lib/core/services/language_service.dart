@@ -12,6 +12,7 @@ class LanguageService extends ChangeNotifier {
       'remember_me': 'Mantener sesión iniciada',
       'login_btn': 'INICIAR SESION',
       'new_user_company': 'Compañia',
+      'welcome': 'Entrando...',
 
       // Drawer
       'driver_role': 'Conductor',
@@ -22,6 +23,7 @@ class LanguageService extends ChangeNotifier {
       'password': 'Contraseña',
       'information': 'Información',
       'announcements': 'Comunicados',
+      'announcements_found': 'No hay comunicados disponibles en este momento.',
       'regulations': 'Reglamentación',
       'manual': 'Manual',
       'logout': 'Cerrar Sesión',
@@ -83,7 +85,9 @@ class LanguageService extends ChangeNotifier {
       'cancel_btn': 'CANCELAR',
       'back_btn': 'REGRESAR',
       'register_success': 'Usuario registrado correctamente',
+      'register_error': 'Usuario no se registrado correctamente',
       'recovery_sent': 'Correo de recuperación enviado',
+      'recovery_sent_error': 'Correo de recuperación fallo en el envío',
       'no_profile': 'SIN PERFIL',
       'error_domine':'Correo inválido',
       'error_user':'Usuario inválido',
@@ -95,6 +99,7 @@ class LanguageService extends ChangeNotifier {
       'remember_me': 'Stay logged in',
       'login_btn': 'LOG IN',
       'new_user_company': 'Company',
+      'welcome': 'Signing in…',
       
       // Drawer
       'driver_role': 'Driver',
@@ -105,6 +110,7 @@ class LanguageService extends ChangeNotifier {
       'password': 'Password',
       'information': 'Information',
       'announcements': 'Announcements',
+      'announcements_found': 'There are no announcements available at this time',
       'regulations': 'Regulations',
       'manual': 'Manual',
       'logout': 'Log Out',
@@ -166,7 +172,9 @@ class LanguageService extends ChangeNotifier {
       'cancel_btn': 'CANCEL',
       'back_btn': 'GO BACK',
       'register_success': 'User registered successfully',
+      'register_error': 'User registration failed',
       'recovery_sent': 'Recovery email sent',
+      'recovery_sent_error': 'Failed to send recovery email',
       'no_profile': 'NO PROFILE',
       'error_domine':'Please enter a valid email address',
       'error_user':'Invalid User',
