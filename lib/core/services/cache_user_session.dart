@@ -22,8 +22,9 @@ class CacheUserSession {
   bool get isCopaair => _prefs?.getBool('isCopaair') ?? false;
   set isCopaair(bool value) => _prefs?.setBool('isCopaair', value);
 
-  int get userSide => _prefs?.getInt('userSide') ?? 1;
+  int? get userSide => _prefs?.getInt('userSide')?? 0;
   set userSide(int value) => _prefs?.setInt('userSide', value);
+
   bool get isPerduration => _prefs?.getBool('isPerduration') ?? false;
   set isPerduration(bool value) => _prefs?.setBool('isPerduration', value);
 
@@ -92,12 +93,23 @@ class CacheUserSession {
   Future<void> clear() async {
     isLogin = false;
     isCopaair = false;
+    userSide = 0;
     companyLatLog = null;
     companyClave = null;
     companyImg = null;
     companyName = null;
     companyEmail = null;
+    companyPhone = null;
     userIdCli = null;
+    userName = "";
+    userEmail = "";
+    loginUser = "";
+    userRuta1 = "";
+    userRuta2 = "";
+    userRuta3 = "";
+    userRuta4 = "";
+    userPassword = "";
+    notificationsCount = 0;
   }
 
 }
