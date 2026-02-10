@@ -11,8 +11,10 @@ import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
 
+import 'app_globals.dart';
 import 'core/services/cache_user_session.dart';
 import 'core/services/socket_service.dart';
+import 'core/viewmodels/announcements_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +36,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PasswordViewModel()),
         ChangeNotifierProvider(create: (_) => NotificationsViewModel()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
+        ChangeNotifierProvider(create: (_) => AnnouncementsViewModel()),
       ],
       child: const MyApp(),
     ),
@@ -51,6 +54,7 @@ class MyApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Busmen Panama',
+      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0C13A2)),
         useMaterial3: true,

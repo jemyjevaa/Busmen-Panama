@@ -4,9 +4,12 @@ import 'package:busmen_panama/core/services/models/user_validate_model.dart';
 import 'package:busmen_panama/core/services/request_service.dart';
 import 'package:flutter/material.dart';
 
+import '../../app_globals.dart';
 import '../../ui/views/home_view.dart';
 import '../services/language_service.dart';
+import '../services/models/create_new_user_model.dart';
 import '../services/models/domine_validate_model.dart';
+import '../services/models/recovery_pasword_model.dart';
 import '../services/url_service.dart';
 import '../services/socket_service.dart';
 
@@ -20,11 +23,15 @@ class LoginViewModel extends ChangeNotifier {
 
   UrlService urlService = UrlService();
   RequestService callApi = RequestService.instance;
-  
-  int _identifiedCompany = 0; // 0: None, 1: Empresa 1, 2: Empresa 2
+
+
+  final int _identifiedCompany = 0; // 0: None, 1: Empresa 1, 2: Empresa 2
   int get identifiedCompany => _identifiedCompany;
 
   bool isOtherDomine = false;
+  bool loadingLogIn = false;
+  bool loadingCreateUser = false;
+  bool loadingRecoveryPwd = false;
 
   LoginViewModel() {
     // Keep listener as backup, but we'll use direct calls for better reliability
@@ -48,42 +55,40 @@ class LoginViewModel extends ChangeNotifier {
 
     notifyListeners();
 
-    /*int newCompany = 0;
-
-    if (trimmed == '1') {
-      newCompany = 1;
-    } else if (trimmed == '2') {
-      newCompany = 2;
-    } else if (trimmed.contains('@')) {
-      newCompany = 2;
-    }
-
-    if (newCompany != _identifiedCompany) {
-      _identifiedCompany = newCompany;
-      notifyListeners();
-      debugPrint('Compañía identificada: $_identifiedCompany');
-    }*/
   }
 
   void _onUserChanged() => identifyCompany(userController.text);
 
-  bool _rememberMe = false;
+  bool _rememberMe = CacheUserSession().isPerduration;
   bool get rememberMe => _rememberMe;
 
   void toggleRememberMe(bool? value) {
     _rememberMe = value ?? false;
+    CacheUserSession().isPerduration = _rememberMe;
+    // print("isPerduration => ${CacheUserSession().isPerduration}");
+    perdureSession();
     notifyListeners();
+  }
+
+  void perdureSession(){
+    CacheUserSession().perdureEmail = CacheUserSession().isPerduration? userController.text:"";
+    CacheUserSession().perdurePass = CacheUserSession().isPerduration?  passwordController.text:"";
   }
 
   Future<void> login(BuildContext context) async {
 
+    loadingLogIn = !loadingLogIn;
+    notifyListeners();
+
     if (!formKeyLogin.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(
           content: Text(language.getString('fill_all_fields')),
           backgroundColor: Colors.red,
         ),
       );
+      loadingLogIn = !loadingLogIn;
+      notifyListeners();
       return;
     }
 
@@ -101,13 +106,15 @@ class LoginViewModel extends ChangeNotifier {
 
       print("respDomine => ${respDomine}");
 
-      if( respDomine!.respuesta != "correcto" ){
-        ScaffoldMessenger.of(context).showSnackBar(
+      if( respDomine == null || respDomine.respuesta != "correcto" ){
+        scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(language.getString('error_domine')),
             backgroundColor: Colors.red,
           ),
         );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
         return;
       }
       // endregion VALIDATE DOMINE
@@ -125,13 +132,15 @@ class LoginViewModel extends ChangeNotifier {
 
       print("respCompany => $respCompany");
 
-      if( respCompany!.respuesta != "existe" ){
-        ScaffoldMessenger.of(context).showSnackBar(
+      if( respCompany == null || respCompany.respuesta != "existe" ){
+        scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(language.getString('error_domine')),
             backgroundColor: Colors.red,
           ),
         );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
         return;
       }
       // endregion VALIDATE COMPANY
@@ -151,13 +160,16 @@ class LoginViewModel extends ChangeNotifier {
         }
       );
       print("respUser => ${respUser?.respuesta}");
-      if( respUser!.respuesta != "existe" ){
-        ScaffoldMessenger.of(context).showSnackBar(
+      
+      if( respUser == null || respUser.respuesta != "existe" ){
+        scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(language.getString('error_user')),
             backgroundColor: Colors.red,
           ),
         );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
         return;
       }
 
@@ -214,77 +226,117 @@ class LoginViewModel extends ChangeNotifier {
         context,
         MaterialPageRoute(builder: (context) => const HomeView()),
       );
+      CacheUserSession().userEmail = userController.text;
+      CacheUserSession().isLogin = true;
+      perdureSession();
+      // userController.text = "";
+      // passwordController.text = "";
+
+      if (context.mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeView()),
+        );
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(language.getString('welcome')),
+            backgroundColor: Colors.green,
+          ),
+        );
+        loadingLogIn = !loadingLogIn;
+        notifyListeners();
+      }
       // endregion VALIDATE USER
 
-    }catch( _ ){
-
+    }catch( e ){
+      loadingLogIn = !loadingLogIn;
+      notifyListeners();
+      print("Login error: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(language.getString('error_user')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
 
-    /*
-    final password = passwordController.text;
-    
-    // Validate based on company/side
-    bool isValid = false;
-    if (_identifiedCompany == 1 && password == '1') {
-      isValid = true;
-    } else if (_identifiedCompany == 2 && (password == '2' || password.isNotEmpty && !_identifiedCompanyIsExplicit)) {
-      // In empresa 2, if it's explicitly '2' or for the general email flow we'll allow any non-empty for now
-      isValid = true;
-    }
-
-    // Explicit check for the user's specific mock case:
-    if (_identifiedCompany == 1 && password != '1') isValid = false;
-    if (_identifiedCompany == 2 && password != '2' && userController.text == '2') isValid = false;
-
-    if (isValid) {
-      debugPrint('Iniciando sesión con Usuario: ${userController.text} para el Lado: $_identifiedCompany');
-      onLoginSuccess(_identifiedCompany);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Contraseña incorrecta para esta empresa. Use "1" para Side 1 o "2" para Side 2.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-     */
   }
 
-  bool get _identifiedCompanyIsExplicit => userController.text == '1' || userController.text == '2';
+  // region CREATE NEW USER
+  final formKeyNewUser = GlobalKey<FormState>();
+  final TextEditingController registerNewCompanyController = TextEditingController();
+  final TextEditingController registerNewUserNameController = TextEditingController();
+  final TextEditingController registerNewEmailController = TextEditingController();
+  final TextEditingController registerNewUserController = TextEditingController();
 
-  final TextEditingController registerNameController = TextEditingController();
-  final TextEditingController registerEmailController = TextEditingController();
-  final TextEditingController recoveryUserController = TextEditingController();
-  final TextEditingController recoveryEmailController = TextEditingController();
+  void registerUser(BuildContext context) async {
+    hideKeyboard(context);
+    if (!formKeyNewUser.currentState!.validate()) {
+      return;
+    }
+
+    try{
+      ResponseNewUser? respNewUser = await callApi.handlingRequestParsed<ResponseNewUser>(
+          urlParam: urlService.getUrlNewUser(),
+          method: "POST",
+          params: {
+            "empresa": registerNewCompanyController.text,
+            "nombre_usuario": registerNewUserNameController.text,
+            "correo": registerNewEmailController.text,
+            "usuario": registerNewUserController.text
+          },
+          fromJson: (json) => ResponseNewUser.fromJson(json)
+      );
+
+      print("respNewUser => $respNewUser");
+
+      if( respNewUser == null || respNewUser.respuesta != "registro correcto" ){
+        print("error al crear");
+        Navigator.pop(context);
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(language.getString('register_error')),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return;
+      }
+
+      registerNewCompanyController.clear();
+      registerNewUserNameController.clear();
+      registerNewEmailController.clear();
+      registerNewUserController.clear();
+
+      Navigator.pop(context);
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(language.getString('register_success')),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+
+    }catch(e){
+      print("Register error: $e");
+    }
+  }
+
+  // endregion CREATE NEW USER
 
   bool _isProcessing = false;
   bool get isProcessing => _isProcessing;
 
-  void registerUser(BuildContext context) async {
-    if (registerNameController.text.isEmpty || registerEmailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Complete todos los campos')));
-      return;
-    }
-    
-    _isProcessing = true;
-    notifyListeners();
-    await Future.delayed(const Duration(seconds: 2));
-    _isProcessing = false;
-    notifyListeners();
-
-    if (context.mounted) {
-      Navigator.pop(context); // Close sheet
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Usuario registrado correctamente')));
-      registerNameController.clear();
-      registerEmailController.clear();
-    }
-  }
+  // region RECOVERY PWD
+  final formKeyRecoveryPwd = GlobalKey<FormState>();
+  final TextEditingController recoveryUserController = TextEditingController();
+  final TextEditingController recoveryEmailController = TextEditingController();
 
   void recoverPassword(BuildContext context) async {
-    if (recoveryUserController.text.isEmpty || recoveryEmailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Complete todos los campos')));
-      return;
-    }
+    hideKeyboard(context);
+    if( !formKeyRecoveryPwd.currentState!.validate() ) return;
 
     _isProcessing = true;
     notifyListeners();
@@ -292,22 +344,61 @@ class LoginViewModel extends ChangeNotifier {
     _isProcessing = false;
     notifyListeners();
 
-    if (context.mounted) {
+    try{
+
+      ResponseRecoveryPwd? respRecoveryPwd = await callApi.handlingRequestParsed<ResponseRecoveryPwd>(
+        urlParam: urlService.getUrlRecoveryPwd(),
+        params: {
+          "usuario": recoveryUserController.text,
+          "empresa": recoveryEmailController.text
+        },
+        method: 'POST',
+        fromJson: (json){
+          print("respRecoveryPwd-json => $json");
+          return ResponseRecoveryPwd.fromJson(json);
+        }
+      );
+
+      print("respRecoveryPwd => $respRecoveryPwd");
+
+      if( respRecoveryPwd == null || respRecoveryPwd.respuesta == "error" ){
+        print("Error al recuperar");
+        Navigator.pop(context);
+        scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(language.getString('recovery_sent_error')),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Correo de recuperación enviado')));
-      recoveryUserController.clear();
-      recoveryEmailController.clear();
+      scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(language.getString('recovery_sent')),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+
+    }catch(e){
+      print("Recovery error: $e");
     }
   }
+
+  // endregion RECOVERY PWD
 
   @override
   void dispose() {
     userController.dispose();
     passwordController.dispose();
-    registerNameController.dispose();
-    registerEmailController.dispose();
     recoveryUserController.dispose();
     recoveryEmailController.dispose();
+    registerNewCompanyController.dispose();
+    registerNewUserNameController.dispose();
+    registerNewEmailController.dispose();
+    registerNewUserController.dispose();
     super.dispose();
   }
 }

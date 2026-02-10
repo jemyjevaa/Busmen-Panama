@@ -1,3 +1,6 @@
+import 'package:busmen_panama/ui/views/announcements_view.dart';
+import 'package:busmen_panama/ui/views/login_view.dart';
+import 'package:busmen_panama/ui/views/regulation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +15,8 @@ import 'package:busmen_panama/ui/views/notification_view.dart';
 import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
 import 'package:busmen_panama/core/services/models/info_schedules_model.dart'; // Added for RouteData
 
+
+import '../../core/services/cache_user_session.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -426,6 +431,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildDrawer(BuildContext context, HomeViewModel viewModel, LanguageService localization) {
+
     return Drawer(
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -519,6 +525,8 @@ class _HomeViewState extends State<HomeView> {
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
               children: [
                 if (viewModel.userSide == 1) ...[
+
+                  CacheUserSession().isCopaair? const SizedBox():
                   _buildDrawerItem(
                     icon: Icons.person_outline,
                     title: localization.getString('profile'),
@@ -770,7 +778,11 @@ class _HomeViewState extends State<HomeView> {
   Widget _buildLogoutItem(BuildContext context, LanguageService localization) {
     return InkWell(
       onTap: () {
-        context.read<HomeViewModel>().logout(context);
+        CacheUserSession().clear();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginView()),
+        );
       },
       borderRadius: BorderRadius.circular(10),
       child: Container(
@@ -801,10 +813,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildCircleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildCircleButton({ required IconData icon, required VoidCallback onTap, }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
