@@ -12,102 +12,176 @@ class PasswordView extends StatelessWidget {
     final localization = context.watch<LanguageService>();
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(localization.getString('password').toUpperCase(), 
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-        backgroundColor: const Color(0xFF064DC3),
+        title: Text(
+          localization.getString('password').toUpperCase(),
+          style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16, letterSpacing: 1.5),
+        ),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF064DC3), Color(0xFF053E9E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Security Icon
+              // Security Icon (Enhanced)
               Container(
-                width: 100,
-                height: 100,
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF064DC3).withOpacity(0.1),
-                  shape: BoxShape.circle,
+                  color: const Color(0xFF064DC3).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(40),
                 ),
-                child: const Icon(Icons.shield_outlined, size: 50, color: Color(0xFF064DC3)),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(Icons.shield_rounded, size: 70, color: const Color(0xFF064DC3).withOpacity(0.2)),
+                    const Icon(Icons.lock_person_rounded, size: 40, color: Color(0xFF064DC3)),
+                  ],
+                ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 40),
 
-              // Form Card
+              // Form Card (Modernized)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 48),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(32),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+                    BoxShadow(
+                      color: const Color(0xFF064DC3).withOpacity(0.08),
+                      blurRadius: 30,
+                      offset: const Offset(0, 15),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
                     Text(
                       localization.getString('change_password'),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Text(
                       localization.getString('password_msg'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 14, color: Colors.blueGrey[400], height: 1.5),
                     ),
-                    const SizedBox(height: 40),
-
-                    // Password Input
+                    const SizedBox(height: 16),
                     Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.grey[200]!),
+                        color: const Color(0xFF064DC3).withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF064DC3).withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.alternate_email_rounded, size: 14, color: const Color(0xFF1E293B).withOpacity(0.5)),
+                          const SizedBox(width: 8),
+                          Text(
+                            viewModel.currentUser,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1E293B).withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+
+                    // Password Input (Pill Design)
+                    Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       child: TextField(
                         controller: viewModel.newPasswordController,
                         obscureText: viewModel.obscureText,
+                        style: const TextStyle(fontSize: 16, color: Color(0xFF334155), fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: localization.getString('new_password_hint'),
-                          hintStyle: TextStyle(color: Colors.grey[500]),
+                          hintStyle: TextStyle(color: Colors.blueGrey[300], fontSize: 14),
                           border: InputBorder.none,
-                          prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[400]),
+                          prefixIcon: Icon(Icons.password_rounded, color: Colors.blueGrey[300]),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              viewModel.obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              color: Colors.grey[500],
+                              viewModel.obscureText ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                              color: const Color(0xFF064DC3).withOpacity(0.6),
                             ),
                             onPressed: viewModel.toggleVisibility,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 20),
                         ),
                       ),
                     ),
                     
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
 
-                    // Action Button
+                    // Action Button (Upgraded)
                     SizedBox(
                       width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: () => viewModel.changePassword(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF064DC3),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 5,
-                          shadowColor: const Color(0xFF064DC3).withOpacity(0.4),
-                        ),
-                        child: viewModel.isSubmitting 
-                          ? const SizedBox(width: 25, height: 25, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text(
-                              localization.getString('change_password_btn'),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white, letterSpacing: 1.0),
+                      height: 60,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF064DC3).withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
                             ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () => viewModel.changePassword(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF064DC3),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF064DC3), Color(0xFF053E9E)],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Container(
+                              alignment: Alignment.center,
+                              child: viewModel.isSubmitting 
+                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : Text(
+                                    localization.getString('change_password_btn').toUpperCase(),
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.white, letterSpacing: 1.2),
+                                  ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],

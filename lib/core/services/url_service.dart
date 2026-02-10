@@ -13,8 +13,25 @@ class UrlService {
   final String _validateDominio  = "validarDominio";
   final String _validateCompany  = "validarempresa";
   final String _validateUser  = "validarusuario";
+  final String _infoRoutesTramos = "inforutastramo";
+  final String _infoStopsRoute = "infoparadasruta";
+  final String _infoUnit = "infounidad";
+  final String _infoFlyers = "infotipoflyers";
+  final String _infoNotifications = "infonotificaciones";
+  final String _positions = "positions";
+  final String _changePassword = "cambiopassword";
+  final String _lostObjects = "envioobjetos";
+
+  final String _urlBaseTracking = "https://rastreobusmenpa.geovoy.com/api/";
+  final String _urlSocket = "wss://rastreobusmenpa.geovoy.com/api/socket";
+  final String _urlDirections = "https://maps.googleapis.com/maps/api/directions/json";
 
   late bool isExisted = nombres.contains(CacheUserSession().isCopaair);
+  
+  bool get isSpecialCompany {
+    final company = CacheUserSession().companyClave?.toLowerCase() ?? '';
+    return company == 'transportepp' || company == 'london';
+  }
 
   String getUrlDomineValidate(){
     return CacheUserSession().isCopaair? "$_urlBaseGeovoyAdmin$_validateDominio" : "$_urlBaseLectorasPanAdmin$_validateDominio";
@@ -27,5 +44,37 @@ class UrlService {
   String getUrlUserValidate(){
     return CacheUserSession().isCopaair? "$_urlBasegGeovoy$_validateUser":"$_urlBaseLectorasPan$_validateUser";
   }
+
+  String getUrlInfoRoutes(){
+    return CacheUserSession().isCopaair 
+      ? "$_urlBasegGeovoy$_infoRoutesTramos" 
+      : "$_urlBaseLectorasPan$_infoRoutesTramos";
+  }
+
+  String getUrlInfoStops(){
+    return CacheUserSession().isCopaair 
+      ? "$_urlBasegGeovoy$_infoStopsRoute" 
+      : "$_urlBaseLectorasPan$_infoStopsRoute";
+  }
+
+  String getUrlInfoUnit(){
+    return CacheUserSession().isCopaair 
+      ? "$_urlBasegGeovoy$_infoUnit" 
+      : "$_urlBaseLectorasPan$_infoUnit";
+  }
+
+  String getUrlSocket() => _urlSocket;
+  String getUrlDirections() => _urlDirections;
+  String getUrlInfoPositions() => "$_urlBaseTracking$_positions";
+  String getUrlInfoFlyers() => "$_urlBaseLectorasPan$_infoFlyers";
+  String getUrlInfoNotifications() => "$_urlBaseLectorasPan$_infoNotifications";
+
+  String getUrlChangePassword() {
+    return CacheUserSession().isCopaair 
+      ? "$_urlBasegGeovoy$_changePassword" 
+      : "$_urlBaseLectorasPan$_changePassword";
+  }
+
+  String getUrlLostObjects() => "$_urlBasegGeovoy$_lostObjects";
 
 }

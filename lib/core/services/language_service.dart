@@ -38,6 +38,8 @@ class LanguageService extends ChangeNotifier {
       'delete_user': 'ELIMINAR USUARIO',
       'user_code': 'Código de Usuario',
       'deleted_success': 'Usuario eliminado correctamente',
+      'options_monitoring': 'Centro de Monitoreo',
+      'options_monitoring_btn': 'Llamar a Monitoreo',
 
       // Schedules
       'on_time': 'A tiempo',
@@ -59,6 +61,8 @@ class LanguageService extends ChangeNotifier {
       'send_report': 'ENVIAR REPORTE',
       'fill_all_fields': 'Por favor complete todos los campos',
       'report_sent': 'Reporte enviado correctamente',
+      'error_sending_report': 'Error al enviar el reporte. Intente de nuevo.',
+      'notification': 'Notificación', // Added for notifications
 
       // Password
       'change_password': 'Cambiar Contraseña',
@@ -68,6 +72,7 @@ class LanguageService extends ChangeNotifier {
       'change_password_btn': 'CAMBIAR CONTRASEÑA',
       'enter_new_password': 'Ingrese una contraseña nueva',
       'password_updated': 'Contraseña actualizada correctamente',
+      'error_changing_password': 'El servidor no pudo procesar el cambio. Verifique sus datos o intente más tarde.',
 
       // Login Extras
       'register': 'Registrarse',
@@ -86,6 +91,17 @@ class LanguageService extends ChangeNotifier {
       'no_profile': 'SIN PERFIL',
       'error_domine':'Correo inválido',
       'error_user':'Usuario inválido',
+      
+      // Tracking (v7)
+      'live_tracking': 'RASTREO EN VIVO ACTIVADO',
+      'full_route': 'RECORRIDO COMPLETO',
+      'select_my_stop': 'SELECCIONAR MI PARADA',
+      'active_tracking': 'RASTREO ACTIVO',
+      'offline_system': 'SISTEMA FUERA DE HORARIO',
+      'offline_msg': 'La ruta no está operando actualmente. Los tiempos mostrados son estimados programados.',
+      'my_stop_label': 'MI PARADA',
+      'stop_number': 'Parada #',
+      'select_stop_desc': 'Selecciona el punto donde abordarás la unidad para darte prioridad.',
     },
     'EN': {
       // Login
@@ -120,6 +136,8 @@ class LanguageService extends ChangeNotifier {
       'delete_user': 'DELETE USER',
       'user_code': 'User Code',
       'deleted_success': 'User deleted successfully',
+      'options_monitoring': 'Monitoring Center',
+      'options_monitoring_btn': 'Call Monitoring',
 
       // Schedules
       'on_time': 'On Time',
@@ -141,6 +159,7 @@ class LanguageService extends ChangeNotifier {
       'send_report': 'SEND REPORT',
       'fill_all_fields': 'Please fill all fields',
       'report_sent': 'Report sent successfully',
+      'error_sending_report': 'Error sending report. Please try again.',
 
       // Password
       'change_password': 'Change Password',
@@ -150,6 +169,7 @@ class LanguageService extends ChangeNotifier {
       'change_password_btn': 'CHANGE PASSWORD',
       'enter_new_password': 'Enter a new password',
       'password_updated': 'Password updated successfully',
+      'error_changing_password': 'The server could not process the change. Please check your data or try again later.',
 
       // Login Extras
       'register': 'Register',
@@ -168,6 +188,18 @@ class LanguageService extends ChangeNotifier {
       'no_profile': 'NO PROFILE',
       'error_domine':'Please enter a valid email address',
       'error_user':'Invalid User',
+      'notification': 'Notification', // Added for notifications
+
+      // Tracking (v7)
+      'live_tracking': 'LIVE TRACKING ACTIVATED',
+      'full_route': 'FULL ROUTE',
+      'select_my_stop': 'SELECT MY STOP',
+      'active_tracking': 'ACTIVE TRACKING',
+      'offline_system': 'SYSTEM OUTSIDE HOURS',
+      'offline_msg': 'The route is not currently operating. Times shown are scheduled estimates.',
+      'my_stop_label': 'MY STOP',
+      'stop_number': 'Stop #',
+      'select_stop_desc': 'Select the point where you will board the unit to prioritize it.',
     },
   };
 

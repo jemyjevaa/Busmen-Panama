@@ -8,11 +8,20 @@ import 'package:busmen_panama/core/viewmodels/profile_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/schedules_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
 
 import 'core/services/cache_user_session.dart';
+import 'core/services/socket_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await CacheUserSession().init();
+  try {
+    await SocketService().initOneSignal();
+  } catch (e) {
+    debugPrint("OneSignal initialization failed: $e");
+  }
 
   runApp(
     MultiProvider(
@@ -23,6 +32,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => SchedulesViewModel()),
         ChangeNotifierProvider(create: (_) => LostFoundViewModel()),
         ChangeNotifierProvider(create: (_) => PasswordViewModel()),
+        ChangeNotifierProvider(create: (_) => NotificationsViewModel()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
       ],
       child: const MyApp(),
@@ -33,12 +43,12 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
-
-    CacheUserSession().init();
-
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Busmen Panama',
       theme: ThemeData(
