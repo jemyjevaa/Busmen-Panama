@@ -38,7 +38,7 @@ class UrlService {
   String getUrlDirections() => _urlDirections;
   String getUrlInfoPositions() => "$_urlBaseTracking$_positions";
   String getUrlInfoFlyers() => "$_urlBaseLectorasPan$_infoFlyers";
-  String getUrlInfoNotifications() => "$_urlBaseLectorasPan$_infoNotifications";
+  String getUrlInfoNotifications() => CacheUserSession().isCopaair? "$_urlBasegGeovoy$_infoNotifications":"$_urlBaseLectorasPan$_infoNotifications";
   String getUrlLostObjects() => "$_urlBasegGeovoy$_lostObjects";
 
   

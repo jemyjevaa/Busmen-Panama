@@ -49,10 +49,10 @@ class LoginViewModel extends ChangeNotifier {
     userController.addListener(_onUserChanged);
   }
 
-  void togglePasswordVisibility() {
+  /*void togglePasswordVisibility() {
     _isPasswordObscured = !_isPasswordObscured;
     notifyListeners();
-  }
+  }*/
 
   void identifyCompany(String val) {
     final trimmed = val.trim();
