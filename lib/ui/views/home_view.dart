@@ -540,9 +540,9 @@ class _HomeViewState extends State<HomeView> {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
               children: [
-                if (viewModel.userSide == 1) ...[
+                /*if (viewModel.userSide == 1) ...[
 
-                  CacheUserSession().isCopaair? const SizedBox():
+                  CacheUserSession().companyClave == "copaair"? const SizedBox():
                   _buildDrawerItem(
                     icon: Icons.person_outline,
                     title: localization.getString('profile'),
@@ -554,7 +554,19 @@ class _HomeViewState extends State<HomeView> {
                     },
                   ),
                   const SizedBox(height: 10),
-                ],
+                ],*/
+                CacheUserSession().companyClave == "copaair"? const SizedBox():
+                _buildDrawerItem(
+                  icon: Icons.person_outline,
+                  title: localization.getString('profile'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProfileView()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
                 _buildDrawerItem(
                   icon: Icons.schedule_outlined,
                   title: localization.getString('schedules'),
