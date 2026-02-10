@@ -80,12 +80,44 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 1. Try to use Company Location first
+      if (_session.companyLatLog != null && _session.companyLatLog!.isNotEmpty) {
+        final parts = _session.companyLatLog!.split(',');
+        if (parts.length == 2) {
+          final lat = double.tryParse(parts[0].trim());
+          final lng = double.tryParse(parts[1].trim());
+          if (lat != null && lng != null) {
+            final companyPos = Position(
+              latitude: lat,
+              longitude: lng,
+              timestamp: DateTime.now(),
+              accuracy: 0,
+              altitude: 0,
+              heading: 0,
+              speed: 0,
+              speedAccuracy: 0,
+              altitudeAccuracy: 0,
+              headingAccuracy: 0,
+            );
+            _currentPosition = companyPos;
+            print("DEBUG - Using Company Location: $lat, $lng");
+            
+            // Allow map to build before animating
+            if (_mapController != null) {
+              _mapController!.animateCamera(CameraUpdate.newLatLngZoom(LatLng(lat, lng), 15));
+            }
+          }
+        }
+      }
+
+      // 2. Fallback or Overlay with real GPS
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _isLoadingLocation = false;
         notifyListeners();
         return;
       }
+// ...
 
       permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {

@@ -33,7 +33,7 @@ class SchedulesViewModel extends ChangeNotifier {
   RouteData? _selectedRoute;
   RouteData? get selectedRoute => _selectedRoute;
 
-  String _filterOption = 'TODAS';
+  String _filterOption = 'filter_all';
   String get filterOption => _filterOption;
 
   void setFilterOption(String option) {
@@ -97,7 +97,7 @@ class SchedulesViewModel extends ChangeNotifier {
   // Status Enum Logic: 
   // 'Ya Realizada', 'En Camino', 'Unidad en el punto', 'Aún no Realizada'
   String getStopLiveStatus(StopData stop) {
-    if (_unit == null || _stops.isEmpty) return 'Aún no Realizada';
+    if (_unit == null || _stops.isEmpty) return 'status_pending';
     
     final unitLat = double.tryParse(_unit!.lat) ?? 0.0;
     final unitLon = double.tryParse(_unit!.lon) ?? 0.0;
@@ -108,7 +108,7 @@ class SchedulesViewModel extends ChangeNotifier {
       stop.latitud, stop.longitud
     );
     
-    if (distance < 50) return 'Unidad en el punto';
+    if (distance < 50) return 'status_at_stop';
 
     // 2. Index based logic
     final stopIndex = _stops.indexOf(stop);
@@ -116,11 +116,11 @@ class SchedulesViewModel extends ChangeNotifier {
     // Update internal current tracker if not set or found a better match
     _updateTrackingIndex(unitLat, unitLon);
 
-    if (stopIndex < _currentUnitStopIndex) return 'Ya Realizada';
-    if (stopIndex == _currentUnitStopIndex + 1) return 'En Camino';
-    if (stopIndex > _currentUnitStopIndex) return 'Aún no Realizada';
+    if (stopIndex < _currentUnitStopIndex) return 'status_completed';
+    if (stopIndex == _currentUnitStopIndex + 1) return 'status_in_transit';
+    if (stopIndex > _currentUnitStopIndex) return 'status_pending';
     
-    return 'Aún no Realizada';
+    return 'status_pending';
   }
 
   void _updateTrackingIndex(double unitLat, double unitLon) {
@@ -175,11 +175,11 @@ class SchedulesViewModel extends ChangeNotifier {
 
   List<RouteData> get filteredRoutes {
     switch (_filterOption) {
-      case 'FRECUENTES':
+      case 'filter_frequent':
         return recentRoutes;
-      case 'EN TIEMPO':
+      case 'filter_on_time':
         return _routes.where(_isRouteInTime).toList();
-      case 'TODAS':
+      case 'filter_all':
       default:
         return _routes;
     }
@@ -628,11 +628,11 @@ class SchedulesViewModel extends ChangeNotifier {
 
   String getActiveDays(String turno) {
     final t = turno.toUpperCase();
-    if (t.contains('L-V') || t.contains('LUN-VIE') || t.contains('LUNES A VIERNES')) return 'Lunes a Viernes';
-    if (t.contains('SAB') || t.contains('SÁB') || t.contains('SABADO') || t.contains('SÁBADO')) return 'Sábados';
-    if (t.contains('DOM') || t.contains('DOMINGO')) return 'Domingos';
-    if (t.contains('DIARIO') || t.contains('TODOS') || t.isEmpty) return 'Todos los días';
-    return 'Horario específico';
+    if (t.contains('L-V') || t.contains('LUN-VIE') || t.contains('LUNES A VIERNES')) return 'monday_friday';
+    if (t.contains('SAB') || t.contains('SÁB') || t.contains('SABADO') || t.contains('SÁBADO')) return 'saturdays';
+    if (t.contains('DOM') || t.contains('DOMINGO')) return 'sunday';
+    if (t.contains('DIARIO') || t.contains('TODOS') || t.isEmpty) return 'every_day';
+    return 'specific_schedule';
   }
 
   String getActiveDaysForRoute(RouteData route) {

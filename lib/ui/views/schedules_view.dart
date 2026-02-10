@@ -20,7 +20,7 @@ class SchedulesView extends StatelessWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => _SimpleRoutePicker(viewModel: viewModel),
+        builder: (context) => _SimpleRoutePicker(viewModel: viewModel, localization: localization),
       );
     }
 
@@ -38,7 +38,7 @@ class SchedulesView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.swap_calls_rounded),
             onPressed: _showRoutePicker,
-            tooltip: 'Cambiar Ruta',
+            tooltip: localization.getString('change_route'),
           ),
         ],
       ),
@@ -81,7 +81,9 @@ class SchedulesView extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          viewModel.isRouteActiveNow(viewModel.selectedRoute!) ? "ACTIVA" : "FUERA DE HORARIO",
+                          viewModel.isRouteActiveNow(viewModel.selectedRoute!) 
+                            ? localization.getString('active') 
+                            : localization.getString('out_of_schedule'),
                           style: TextStyle(
                             color: viewModel.isRouteActiveNow(viewModel.selectedRoute!) ? Colors.green : Colors.orange,
                             fontSize: 10,
@@ -103,10 +105,17 @@ class SchedulesView extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.access_time, color: Colors.white70, size: 16),
+                      const Icon(Icons.access_time_rounded, color: Colors.white70, size: 16),
                       const SizedBox(width: 8),
                       Text(
-                        "Turno: ${viewModel.selectedRoute!.tipo_ruta}",
+                        "${localization.getString('shift_label')}: ${localization.getString(viewModel.selectedRoute!.tipo_ruta.toLowerCase())}",
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                      const SizedBox(width: 15),
+                      const Icon(Icons.calendar_today_rounded, color: Colors.white70, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        "${localization.getString('days_label')}: ${localization.getString(viewModel.getActiveDays(viewModel.selectedRoute!.dia_ruta ?? viewModel.selectedRoute!.tipo_ruta))}",
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
@@ -132,7 +141,7 @@ class SchedulesView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('UNIDAD ASIGNADA', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
+                                Text(localization.getString('assigned_unit'), style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
                                 Text(
                                   viewModel.unit!.economico,
                                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
@@ -160,7 +169,7 @@ class SchedulesView extends StatelessWidget {
                             Icon(Icons.directions_bus_outlined, size: 80, color: Colors.grey[300]),
                             const SizedBox(height: 20),
                             Text(
-                              'Seleccione una ruta para ver los horarios',
+                              localization.getString('select_route_msg'),
                               style: TextStyle(color: Colors.grey[500], fontSize: 16),
                             ),
                           ],
@@ -168,10 +177,10 @@ class SchedulesView extends StatelessWidget {
                       )
                     : stops.isEmpty
                         ? Center(
-                            child: Text(
-                              'No se encontraron paradas para esta ruta',
-                              style: TextStyle(color: Colors.grey[500]),
-                            ),
+                        child: Text(
+                          localization.getString('no_stops_found'),
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.all(20),
@@ -251,7 +260,7 @@ class SchedulesView extends StatelessWidget {
                                                       const SizedBox(height: 10),
                                                       Row(
                                                         children: [
-                                                          _buildTimeRow(Icons.access_time_rounded, stop.horario, 'Horario'),
+                                                          _buildTimeRow(Icons.access_time_rounded, stop.horario, localization.getString('schedule_label')),
                                                           const Spacer(),
                                                           Container(
                                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -263,7 +272,7 @@ class SchedulesView extends StatelessWidget {
                                                             ),
                                                             child: Text(
                                                               viewModel.isRouteActiveNow(viewModel.selectedRoute!)
-                                                                  ? (isDelayed ? 'RETRASADO' : 'A TIEMPO')
+                                                                  ? (isDelayed ? localization.getString('delayed') : localization.getString('on_time'))
                                                                   : stop.hora_parada, // Using exact parada time when inactive
                                                               style: TextStyle(
                                                                 color: viewModel.isRouteActiveNow(viewModel.selectedRoute!)
@@ -322,7 +331,8 @@ class SchedulesView extends StatelessWidget {
 
 class _SimpleRoutePicker extends StatelessWidget {
   final SchedulesViewModel viewModel;
-  const _SimpleRoutePicker({required this.viewModel});
+  final LanguageService localization;
+  const _SimpleRoutePicker({required this.viewModel, required this.localization});
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +353,7 @@ class _SimpleRoutePicker extends StatelessWidget {
             decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
           ),
           const SizedBox(height: 20),
-          const Text("SELECCIONA UNA RUTA", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF064DC3))),
+          Text(localization.getString('select_a_route').toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF064DC3))),
           const SizedBox(height: 15),
           Expanded(
             child: ListView.builder(
@@ -352,7 +362,7 @@ class _SimpleRoutePicker extends StatelessWidget {
               itemBuilder: (context, index) {
                 final groupName = viewModel.groupedRoutes.keys.elementAt(index);
                 final routes = viewModel.groupedRoutes[groupName]!;
-                return _SimpleRouteGroup(groupName: groupName, routes: routes, model: viewModel);
+                return _SimpleRouteGroup(groupName: groupName, routes: routes, model: viewModel, localization: localization);
               },
             ),
           ),
@@ -366,7 +376,8 @@ class _SimpleRouteGroup extends StatefulWidget {
   final String groupName;
   final List<RouteData> routes;
   final SchedulesViewModel model;
-  const _SimpleRouteGroup({required this.groupName, required this.routes, required this.model});
+  final LanguageService localization;
+  const _SimpleRouteGroup({required this.groupName, required this.routes, required this.model, required this.localization});
 
   @override
   State<_SimpleRouteGroup> createState() => _SimpleRouteGroupState();
@@ -377,7 +388,12 @@ class _SimpleRouteGroupState extends State<_SimpleRouteGroup> {
 
   @override
   Widget build(BuildContext context) {
-    List<RouteData> displayed = _selectedTramo == null ? [] : widget.routes.where((r) => r.tramo == _selectedTramo).toList();
+    List<RouteData> displayed = _selectedTramo == null ? [] : widget.routes.where((r) {
+      final t = r.tramo.toUpperCase();
+      if (_selectedTramo == 'entry') return t.contains('ENTRADA');
+      if (_selectedTramo == 'exit') return t.contains('SALIDA');
+      return false;
+    }).toList();
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -395,15 +411,20 @@ class _SimpleRouteGroupState extends State<_SimpleRouteGroup> {
                children: [
                  Row(
                    children: [
-                     _buildChip('ENTRADA'),
+                     _buildChip('entry', widget.localization.getString('entry')),
                      const SizedBox(width: 8),
-                     _buildChip('SALIDA'),
+                     _buildChip('exit', widget.localization.getString('exit')),
                    ],
                  ),
                  if (_selectedTramo != null) ...[
                    const SizedBox(height: 10),
                    ...displayed.map((r) => ListTile(
-                     title: Text("Horario: ${r.tipo_ruta}", style: const TextStyle(fontSize: 13)),
+                       title: Text("${widget.localization.getString('shift_label')}: ${widget.localization.getString(r.tipo_ruta.toLowerCase())}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                       subtitle: Text(
+                         "${widget.localization.getString('days_label')}: ${widget.localization.getString(widget.model.getActiveDays(r.dia_ruta ?? r.tipo_ruta))}", 
+                         style: const TextStyle(fontSize: 11)
+                       ),
+                       dense: true,
                       onTap: () {
                         widget.model.selectRoute(r, onRouteLoaded: () {
                           final homeViewModel = context.read<HomeViewModel>();
@@ -424,12 +445,12 @@ class _SimpleRouteGroupState extends State<_SimpleRouteGroup> {
     );
   }
 
-  Widget _buildChip(String t) {
-    final isS = _selectedTramo == t;
+  Widget _buildChip(String key, String label) {
+    final isS = _selectedTramo == key;
     return ChoiceChip(
-      label: Text(t, style: TextStyle(fontSize: 11, color: isS ? Colors.white : Colors.black87)),
+      label: Text(label, style: TextStyle(fontSize: 11, color: isS ? Colors.white : Colors.black87)),
       selected: isS,
-      onSelected: (s) => setState(() => _selectedTramo = s ? t : null),
+      onSelected: (s) => setState(() => _selectedTramo = s ? key : null),
       selectedColor: const Color(0xFF064DC3),
       backgroundColor: Colors.grey[100],
       showCheckmark: false,

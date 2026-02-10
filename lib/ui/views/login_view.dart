@@ -138,6 +138,8 @@ class _LoginViewState extends State<LoginView> {
                                     hint: localization.getString('pass_label'),
                                     icon: Icons.lock_outline,
                                     isPassword: true,
+                                    obscureText: viewModel.obscurePassword,
+                                    onToggleVisibility: viewModel.togglePasswordVisibility,
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return localization.getString('fill_all_fields');
@@ -248,9 +250,9 @@ class _LoginViewState extends State<LoginView> {
                                             // QR logic placeholder
                                           },
                                           icon: const Icon(Icons.qr_code_scanner),
-                                          label: const Text(
-                                            "ESCANEAR CÓDIGO QR",
-                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                                          label: Text(
+                                            localization.getString('scan_qr'),
+                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
                                           ),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.white,

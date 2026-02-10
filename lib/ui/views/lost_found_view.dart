@@ -94,7 +94,7 @@ class LostFoundView extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Form Section: User Info
-            _buildSectionTitle('Información de Contacto', Icons.person_rounded),
+            _buildSectionTitle(localization.getString('contact_info'), Icons.person_rounded),
             const SizedBox(height: 16),
             _buildFormCard([
               _buildModernTextField(
@@ -114,7 +114,7 @@ class LostFoundView extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Form Section: Incident Details
-            _buildSectionTitle('Detalles del Incidente', Icons.bus_alert_rounded),
+            _buildSectionTitle(localization.getString('incident_details'), Icons.bus_alert_rounded),
             const SizedBox(height: 16),
             _buildFormCard([
               // Modern Searchable Picker
@@ -206,7 +206,7 @@ class LostFoundView extends StatelessWidget {
             const SizedBox(height: 32),
             
             // Description
-            _buildSectionTitle('Descripción del Objeto', Icons.description_rounded),
+            _buildSectionTitle(localization.getString('object_description'), Icons.description_rounded),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(20),
@@ -404,7 +404,7 @@ class LostFoundView extends StatelessWidget {
                             },
                             decoration: InputDecoration(
                               icon: const Icon(Icons.search_rounded, color: Color(0xFF064DC3), size: 22),
-                              hintText: 'Buscar ruta...',
+                              hintText: localization.getString('search_route_hint'),
                               hintStyle: TextStyle(color: Colors.blueGrey[200], fontSize: 14),
                               border: InputBorder.none,
                             ),
@@ -419,7 +419,7 @@ class LostFoundView extends StatelessWidget {
                   // List
                   Expanded(
                     child: groupedRoutes.isEmpty 
-                    ? Center(child: Text("No se encontraron rutas", style: TextStyle(color: Colors.grey[400])))
+                    ? Center(child: Text(localization.getString('no_results'), style: TextStyle(color: Colors.grey[400])))
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                         itemCount: groupedRoutes.keys.length,
@@ -443,7 +443,7 @@ class LostFoundView extends StatelessWidget {
                                 final isSelected = viewModel.selectedRouteModel?.claveruta == route.claveruta;
                                 final schedule = (route.hora_inicio != null) 
                                     ? "${route.hora_inicio} - ${route.hora_fin}"
-                                    : "Horario no definido";
+                                    : localization.getString('schedule_not_defined');
                                 
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 8),

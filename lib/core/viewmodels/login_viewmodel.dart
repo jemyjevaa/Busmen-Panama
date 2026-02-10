@@ -33,6 +33,14 @@ class LoginViewModel extends ChangeNotifier {
   bool loadingCreateUser = false;
   bool loadingRecoveryPwd = false;
 
+  bool _obscurePassword = true;
+  bool get obscurePassword => _obscurePassword;
+
+  void togglePasswordVisibility() {
+    _obscurePassword = !_obscurePassword;
+    notifyListeners();
+  }
+
   LoginViewModel() {
     // Keep listener as backup, but we'll use direct calls for better reliability
     userController.addListener(_onUserChanged);
