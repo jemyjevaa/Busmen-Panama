@@ -11,6 +11,7 @@ import '../services/models/create_new_user_model.dart';
 import '../services/models/domine_validate_model.dart';
 import '../services/models/recovery_pasword_model.dart';
 import '../services/url_service.dart';
+import '../services/socket_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
 
@@ -177,7 +178,54 @@ class LoginViewModel extends ChangeNotifier {
       CacheUserSession().companyImg = respCompany.datos.first.url;
       CacheUserSession().companyName = respCompany.datos.first.nombre;
       CacheUserSession().companyEmail = respCompany.datos.first.correos;
+      CacheUserSession().companyPhone = respCompany.datos.first.telefonos;
+      
+      print("DEBUG - COMPANY DATA: ${respCompany.datos.first.nombre}, Phone: '${respCompany.datos.first.telefonos}', Emails: '${respCompany.datos.first.correos}'");
+      print("DEBUG - FULL COMPANY API RESPONSE READY");
+      
+      print("DEBUG - COMPANY CLAVE FROM API: '${respCompany.datos.first.clave}'");
+
+      // Determine userSide based on company (Case insensitive)
+      final claveUpper = respCompany.datos.first.clave.toUpperCase();
+      if (claveUpper == "COPAAIR" || claveUpper == "GRAINGER") {
+        CacheUserSession().userSide = 2;
+        CacheUserSession().isCopaair = true;
+      } else {
+        CacheUserSession().userSide = 1;
+        CacheUserSession().isCopaair = false;
+      }
+      
+      print("DEBUG - SETTING USER SIDE TO: ${CacheUserSession().userSide}");
+
+      CacheUserSession().userName = respUser.datos.first.nombre;
+      CacheUserSession().userEmail = respUser.datos.first.email;
+      CacheUserSession().loginUser = userController.text;
       CacheUserSession().userIdCli = respUser.datos.first.id_cli;
+      print("Sesión guardada - Usuario: ${CacheUserSession().userName}, Email: ${CacheUserSession().userEmail}");
+      CacheUserSession().userRuta1 = respUser.datos.first.ruta1;
+      CacheUserSession().userRuta2 = respUser.datos.first.ruta2;
+      CacheUserSession().userRuta3 = respUser.datos.first.ruta3;
+      CacheUserSession().userRuta4 = respUser.datos.first.ruta4;
+      CacheUserSession().userPassword = passwordController.text;
+      CacheUserSession().isLogin = true;
+
+      // Initialize GPS session cookie for WebSocket tracking (in background)
+      print("DEBUG - Initializing GPS session cookie after successful login...");
+      SocketService().initSessionCookie().then((success) {
+        if (success) {
+          print("DEBUG - GPS session cookie ready for tracking");
+        } else {
+          print("WARNING - GPS session cookie initialization failed, tracking may not work");
+        }
+      });
+
+      // OneSignal Tagging
+      SocketService().setOneSignalTags(CacheUserSession().companyClave ?? "", CacheUserSession().userIdCli ?? "");
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeView()),
+      );
       CacheUserSession().userEmail = userController.text;
       CacheUserSession().isLogin = true;
       perdureSession();

@@ -60,8 +60,8 @@ class ProfileView extends StatelessWidget {
                     alignment: Alignment.topCenter,
                     children: [
                       Container(
-                        margin: const EdgeInsets.only(top: 50), // Space for avatar
-                        padding: const EdgeInsets.fromLTRB(20, 70, 20, 20),
+                        margin: const EdgeInsets.only(top: 60), // Medium space for medium logo
+                        padding: const EdgeInsets.fromLTRB(20, 70, 20, 20), // Adjusted padding
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
@@ -83,14 +83,17 @@ class ProfileView extends StatelessWidget {
                                 color: Color(0xFF333333),
                               ),
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              viewModel.userEmail,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
+                             const SizedBox(height: 5),
+                             Column(
+                               children: viewModel.userEmails.map((email) => Text(
+                                 email,
+                                 style: TextStyle(
+                                   fontSize: 14,
+                                   color: Colors.grey[600],
+                                 ),
+                                 textAlign: TextAlign.center,
+                               )).toList(),
+                             ),
                             const SizedBox(height: 20),
                             const Divider(),
                             const SizedBox(height: 20),
@@ -137,14 +140,14 @@ class ProfileView extends StatelessWidget {
                         ),
                       ),
                       
-                      // Floating Avatar
+                      // Floating Avatar (Logo)
                       Container(
-                        width: 100,
-                        height: 100,
+                        width: 200, // Medium width
+                        height: 100, // Medium height
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border: Border.all(color: Colors.white, width: 4),
+                          color: Colors.black.withOpacity(0.2), // Reverted dark background
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: Colors.white, width: 2),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.2),
@@ -153,17 +156,23 @@ class ProfileView extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: ClipOval(
-                          child: Container(
-                            color: const Color(0xFFE0E0E0),
-                            child: const Icon(
-                               Icons.person,
-                               size: 60,
-                               color: Colors.grey,
-                            ),
-                            // In real app, verify if image exists
-                            // child: Image.network('url', fit: BoxFit.cover),
-                          ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: viewModel.userImage != null && viewModel.userImage!.isNotEmpty
+                              ? Image.network(
+                                  viewModel.userImage!,
+                                  fit: BoxFit.contain, // Contain to avoid cropping logo
+                                  errorBuilder: (context, error, stackTrace) => const Icon(
+                                    Icons.person,
+                                    size: 40,
+                                    color: Colors.white70,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.white70,
+                                ),
                         ),
                       ),
                     ],

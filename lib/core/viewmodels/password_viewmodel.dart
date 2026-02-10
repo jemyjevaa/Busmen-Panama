@@ -1,4 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:busmen_panama/core/services/request_service.dart';
+import 'package:busmen_panama/core/services/url_service.dart';
+import 'package:busmen_panama/core/services/cache_user_session.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
+import 'package:busmen_panama/ui/widgets/status_dialog.dart';
+import 'package:busmen_panama/core/services/models/general_options_response.dart';
 
 import '../services/cache_user_session.dart';
 import '../services/language_service.dart';
@@ -8,6 +16,9 @@ import '../services/url_service.dart';
 
 class PasswordViewModel extends ChangeNotifier {
   final TextEditingController newPasswordController = TextEditingController();
+  final RequestService _requestService = RequestService.instance;
+  final UrlService _urlService = UrlService();
+  final CacheUserSession _session = CacheUserSession();
 
   final language = LanguageService();
 
@@ -20,12 +31,36 @@ class PasswordViewModel extends ChangeNotifier {
   bool _obscureText = true;
   bool get obscureText => _obscureText;
 
+  String get currentUser => _session.loginUser ?? _session.userEmail ?? '...';
+
   void toggleVisibility() {
     _obscureText = !_obscureText;
     notifyListeners();
   }
 
   Future<void> changePassword(BuildContext context) async {
+    final localization = Provider.of<LanguageService>(context, listen: false);
+    final password = newPasswordController.text.trim();
+    if (password.isEmpty) {
+      _showSnackBar(context, localization.getString('enter_new_password'), isError: true);
+      return;
+    }
+
+    // Capture values before async to avoid context issues
+    final email = _session.userEmail;
+    final company = _session.companyClave;
+    final loginUser = _session.loginUser;
+    
+    // The identifier used for the API call
+    final userIdentifier = loginUser ?? email;
+
+    if (userIdentifier == null || userIdentifier.isEmpty) {
+      _showSnackBar(context, localization.getString('error_user'), isError: true);
+      return;
+    }
+
+    if (company == null || company.isEmpty) {
+      _showSnackBar(context, 'Error: No company code found.', isError: true);
     if (newPasswordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(language.getString('new_password_hint'))),
@@ -36,6 +71,101 @@ class PasswordViewModel extends ChangeNotifier {
     _isSubmitting = true;
     notifyListeners();
 
+    try {
+      print("DEBUG - Attempting password change for identifier: $userIdentifier (Email: $email)");
+      final success = await _changePasswordHandler(password, userIdentifier, company);
+      
+      _isSubmitting = false;
+      notifyListeners();
+
+      if (success) {
+        // PERMANENT STORAGE: Update local password to keep auto-login working
+        _session.userPassword = password;
+        
+        if (context.mounted) {
+          StatusDialog.show(
+            context,
+            title: '¡Hecho!',
+            message: localization.getString('password_updated'),
+            type: StatusType.success,
+            onDismiss: () => Navigator.pop(context), // Pop view only after dialog is closed
+          );
+        }
+      } else {
+        if (context.mounted) {
+          _showSnackBar(context, localization.getString('error_changing_password'), isError: true);
+        }
+      }
+    } catch (e) {
+      _isSubmitting = false;
+      notifyListeners();
+      print("ERROR - Exception during changePassword: $e");
+      if (context.mounted) {
+        _showSnackBar(context, 'Error: $e', isError: true);
+      }
+    }
+  }
+
+  Future<bool> _changePasswordHandler(String newPassword, String userIdentifier, String company) async {
+    final url = _urlService.getUrlChangePassword();
+
+    final params = {
+      'usuario': userIdentifier,
+      'passwordnuevo': newPassword,
+      'clave': newPassword, // Added 'clave' as backup per user's hint about field names
+      'empresa': company,
+    };
+
+    final customHeaders = {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+
+    print("DEBUG - POST to $url with params: $params");
+
+    // Use handlingRequest to get the raw body first for the special compatibility logic
+    final responseBody = await _requestService.handlingRequest(
+      urlParam: url,
+      params: params,
+      method: 'POST',
+      asJson: false, // URLEncoding.default
+      customHeaders: customHeaders,
+    );
+
+    if (responseBody == null) {
+      print("ERROR - Response body is null (Request failed)");
+      return false;
+    }
+
+    print("DEBUG - Raw Response: $responseBody");
+
+    // Special compatibility logic:
+    // If successful (responseBody not null from handlingRequest means 20x status)
+    // but not perfect JSON, check if it contains "correcto" or just treat as success.
+    try {
+      final decoded = jsonDecode(responseBody);
+      final response = GeneralOptionsResponse.fromJson(decoded);
+      final isCorrect = response.respuesta.toLowerCase() == 'correcto';
+      print("DEBUG - Parsed response: ${response.respuesta} -> isCorrect: $isCorrect");
+      return isCorrect;
+    } catch (e) {
+      print("DEBUG - JSON parsing failed for password change, checking raw body contents...");
+      // Fallback: If raw body contains "correcto", we consider it success per requirements
+      final containsCorrecto = responseBody.toLowerCase().contains('correcto');
+      print("DEBUG - Raw body contains 'correcto': $containsCorrecto");
+      return containsCorrecto;
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String message, {bool isError = false}) {
+    if (!context.mounted) return;
+    
+    StatusDialog.show(
+      context,
+      title: isError ? 'Ups...' : '¡Hecho!',
+      message: message,
+      type: isError ? StatusType.error : StatusType.success,
+    );
     // Simulate API call
     await Future.delayed(const Duration(seconds: 2));
     try{

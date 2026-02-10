@@ -404,16 +404,10 @@ class _SimpleRouteGroupState extends State<_SimpleRouteGroup> {
                    const SizedBox(height: 10),
                    ...displayed.map((r) => ListTile(
                      title: Text("Horario: ${r.tipo_ruta}", style: const TextStyle(fontSize: 13)),
-                      onTap: () {
-                        widget.model.selectRoute(r, onRouteLoaded: () {
-                          final homeViewModel = context.read<HomeViewModel>();
-                          if (widget.model.stops.isNotEmpty) {
-                            final points = widget.model.stops.map((s) => LatLng(s.latitud, s.longitud)).toList();
-                            homeViewModel.moveCameraToRoute(points);
-                          }
-                        });
-                        Navigator.pop(context);
-                      },
+                     onTap: () {
+                       widget.model.selectRoute(r);
+                       Navigator.pop(context);
+                     },
                    )),
                  ]
                ],
