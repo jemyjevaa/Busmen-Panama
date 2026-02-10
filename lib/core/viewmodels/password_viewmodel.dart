@@ -8,23 +8,12 @@ import 'package:busmen_panama/core/services/language_service.dart';
 import 'package:busmen_panama/ui/widgets/status_dialog.dart';
 import 'package:busmen_panama/core/services/models/general_options_response.dart';
 
-import '../services/cache_user_session.dart';
-import '../services/language_service.dart';
-import '../services/models/change_password_model.dart';
-import '../services/request_service.dart';
-import '../services/url_service.dart';
-
 class PasswordViewModel extends ChangeNotifier {
   final TextEditingController newPasswordController = TextEditingController();
   final RequestService _requestService = RequestService.instance;
   final UrlService _urlService = UrlService();
   final CacheUserSession _session = CacheUserSession();
 
-  final language = LanguageService();
-
-  UrlService urlService = UrlService();
-  RequestService callApi = RequestService.instance;
-  
   bool _isSubmitting = false;
   bool get isSubmitting => _isSubmitting;
 
@@ -41,8 +30,9 @@ class PasswordViewModel extends ChangeNotifier {
   Future<void> changePassword(BuildContext context) async {
     final localization = Provider.of<LanguageService>(context, listen: false);
     final password = newPasswordController.text.trim();
+    
     if (password.isEmpty) {
-      _showSnackBar(context, localization.getString('enter_new_password'), isError: true);
+      _showStatusDialog(context, localization.getString('enter_new_password'), isError: true);
       return;
     }
 
@@ -55,16 +45,12 @@ class PasswordViewModel extends ChangeNotifier {
     final userIdentifier = loginUser ?? email;
 
     if (userIdentifier == null || userIdentifier.isEmpty) {
-      _showSnackBar(context, localization.getString('error_user'), isError: true);
+      _showStatusDialog(context, localization.getString('error_user'), isError: true);
       return;
     }
 
     if (company == null || company.isEmpty) {
-      _showSnackBar(context, 'Error: No company code found.', isError: true);
-    if (newPasswordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(language.getString('new_password_hint'))),
-      );
+      _showStatusDialog(context, 'Error: No company code found.', isError: true);
       return;
     }
 
@@ -88,12 +74,12 @@ class PasswordViewModel extends ChangeNotifier {
             title: '¡Hecho!',
             message: localization.getString('password_updated'),
             type: StatusType.success,
-            onDismiss: () => Navigator.pop(context), // Pop view only after dialog is closed
+            onDismiss: () => Navigator.pop(context), 
           );
         }
       } else {
         if (context.mounted) {
-          _showSnackBar(context, localization.getString('error_changing_password'), isError: true);
+          _showStatusDialog(context, localization.getString('error_changing_password'), isError: true);
         }
       }
     } catch (e) {
@@ -101,7 +87,7 @@ class PasswordViewModel extends ChangeNotifier {
       notifyListeners();
       print("ERROR - Exception during changePassword: $e");
       if (context.mounted) {
-        _showSnackBar(context, 'Error: $e', isError: true);
+        _showStatusDialog(context, 'Error: $e', isError: true);
       }
     }
   }
@@ -112,7 +98,7 @@ class PasswordViewModel extends ChangeNotifier {
     final params = {
       'usuario': userIdentifier,
       'passwordnuevo': newPassword,
-      'clave': newPassword, // Added 'clave' as backup per user's hint about field names
+      'clave': newPassword, 
       'empresa': company,
     };
 
@@ -123,12 +109,11 @@ class PasswordViewModel extends ChangeNotifier {
 
     print("DEBUG - POST to $url with params: $params");
 
-    // Use handlingRequest to get the raw body first for the special compatibility logic
     final responseBody = await _requestService.handlingRequest(
       urlParam: url,
       params: params,
       method: 'POST',
-      asJson: false, // URLEncoding.default
+      asJson: false, 
       customHeaders: customHeaders,
     );
 
@@ -139,9 +124,6 @@ class PasswordViewModel extends ChangeNotifier {
 
     print("DEBUG - Raw Response: $responseBody");
 
-    // Special compatibility logic:
-    // If successful (responseBody not null from handlingRequest means 20x status)
-    // but not perfect JSON, check if it contains "correcto" or just treat as success.
     try {
       final decoded = jsonDecode(responseBody);
       final response = GeneralOptionsResponse.fromJson(decoded);
@@ -150,14 +132,13 @@ class PasswordViewModel extends ChangeNotifier {
       return isCorrect;
     } catch (e) {
       print("DEBUG - JSON parsing failed for password change, checking raw body contents...");
-      // Fallback: If raw body contains "correcto", we consider it success per requirements
       final containsCorrecto = responseBody.toLowerCase().contains('correcto');
       print("DEBUG - Raw body contains 'correcto': $containsCorrecto");
       return containsCorrecto;
     }
   }
 
-  void _showSnackBar(BuildContext context, String message, {bool isError = false}) {
+  void _showStatusDialog(BuildContext context, String message, {bool isError = false}) {
     if (!context.mounted) return;
     
     StatusDialog.show(
@@ -166,43 +147,6 @@ class PasswordViewModel extends ChangeNotifier {
       message: message,
       type: isError ? StatusType.error : StatusType.success,
     );
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
-    try{
-      ResponseChangePwd? respChangePwd = await callApi.handlingRequestParsed<ResponseChangePwd>(
-        urlParam: urlService.getUrlChangePwd(),
-        params: {
-          "usuario":CacheUserSession().userEmail,
-          "passwordnuevo":newPasswordController.text,
-          "empresa":CacheUserSession().companyClave
-        },
-        method: 'POST',
-        fromJson: (json) => ResponseChangePwd.fromJson(json)
-      );
-      print("respChangePwd => $respChangePwd");
-      if( respChangePwd?.respuesta == null || respChangePwd?.respuesta != "correcto" ){
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(language.getString('new_password_hint'))),
-        );
-        _isSubmitting = false;
-        notifyListeners();
-        return;
-      }
-
-    }catch(_){
-
-    }
-
-
-    _isSubmitting = false;
-    newPasswordController.clear();
-    notifyListeners();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(language.getString('password_updated'))),
-    );
-
-    // Navigator.pop(context);
   }
 
   @override
