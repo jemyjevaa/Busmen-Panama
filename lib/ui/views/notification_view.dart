@@ -53,7 +53,7 @@ class _NotificationViewState extends State<NotificationView> {
                         ? Stack(
                             children: [
                               ListView(), // To enable pull-to-refresh
-                              _buildEmptyState(viewModel),
+                              _buildEmptyState(viewModel, localization),
                             ],
                           )
                         : ListView.builder(
@@ -61,7 +61,7 @@ class _NotificationViewState extends State<NotificationView> {
                             itemCount: viewModel.notifications.length,
                             itemBuilder: (context, index) {
                               final notification = viewModel.notifications[index];
-                              return _buildNotificationCard(notification);
+                              return _buildNotificationCard(notification, localization);
                             },
                           ),
               ),
@@ -157,7 +157,7 @@ class _NotificationViewState extends State<NotificationView> {
     );
   }
 
-  Widget _buildEmptyState(NotificationsViewModel viewModel) {
+  Widget _buildEmptyState(NotificationsViewModel viewModel, LanguageService localization) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -171,20 +171,20 @@ class _NotificationViewState extends State<NotificationView> {
             child: Icon(Icons.notifications_off_rounded, size: 64, color: const Color(0xFF064DC3).withOpacity(0.4)),
           ),
           const SizedBox(height: 24),
-          const Text(
-            "No hay notificaciones",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          Text(
+            localization.getString('no_notifications'),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
           ),
           const SizedBox(height: 8),
           Text(
-            "Te avisaremos cuando haya novedades",
+            localization.getString('notify_msg'),
             style: TextStyle(fontSize: 14, color: Colors.blueGrey[300]),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () => viewModel.loadNotifications(),
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text("Reintentar"),
+            label: Text(localization.getString('retry')),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF064DC3),
               foregroundColor: Colors.white,
@@ -197,11 +197,11 @@ class _NotificationViewState extends State<NotificationView> {
     );
   }
 
-  Widget _buildNotificationCard(AppNotification notification) {
-    final style = _getNotificationStyle(notification.tipo);
+  Widget _buildNotificationCard(AppNotification notification, LanguageService localization) {
+    final style = _getNotificationStyle(notification.tipo, localization);
 
     return GestureDetector(
-      onTap: () => _handleNotificationTap(notification),
+      onTap: () => _handleNotificationTap(notification, localization),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
@@ -273,17 +273,17 @@ class _NotificationViewState extends State<NotificationView> {
     );
   }
 
-  void _handleNotificationTap(AppNotification notification) {
+  void _handleNotificationTap(AppNotification notification, LanguageService localization) {
     final tipo = notification.tipo ?? "1";
     
     if (tipo == "1") {
-      _showSimpleAlert(notification);
+      _showSimpleAlert(notification, localization);
     } else {
-      _showDetailSheet(notification);
+      _showDetailSheet(notification, localization);
     }
   }
 
-  void _showSimpleAlert(AppNotification notification) {
+  void _showSimpleAlert(AppNotification notification, LanguageService localization) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -293,14 +293,14 @@ class _NotificationViewState extends State<NotificationView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("CERRAR", style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF064DC3))),
+            child: Text(localization.getString('close_btn'), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF064DC3))),
           ),
         ],
       ),
     );
   }
 
-  void _showDetailSheet(AppNotification notification) {
+  void _showDetailSheet(AppNotification notification, LanguageService localization) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -333,11 +333,11 @@ class _NotificationViewState extends State<NotificationView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _getNotificationStyle(notification.tipo).label,
+                      _getNotificationStyle(notification.tipo, localization).label,
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 12,
-                        color: _getNotificationStyle(notification.tipo).color,
+                        color: _getNotificationStyle(notification.tipo, localization).color,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -362,13 +362,13 @@ class _NotificationViewState extends State<NotificationView> {
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _getNotificationStyle(notification.tipo).color,
+                          backgroundColor: _getNotificationStyle(notification.tipo, localization).color,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.all(16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           elevation: 0,
                         ),
-                        child: const Text("ENTENDIDO", style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                        child: Text(localization.getString('understood'), style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
                       ),
                     ),
                   ],
@@ -381,35 +381,35 @@ class _NotificationViewState extends State<NotificationView> {
     );
   }
 
-  _NotificationStyle _getNotificationStyle(String? tipo) {
+  _NotificationStyle _getNotificationStyle(String? tipo, LanguageService localization) {
     switch (tipo) {
       case "2":
         return _NotificationStyle(
-          label: "COMUNICADO",
+          label: localization.getString('comunicado'),
           icon: Icons.campaign_rounded,
           color: const Color(0xFF10B981),
         );
       case "3":
         return _NotificationStyle(
-          label: "REGLAMENTO",
+          label: localization.getString('reglamento'),
           icon: Icons.description_rounded,
           color: const Color(0xFFF59E0B),
         );
       case "4":
         return _NotificationStyle(
-          label: "MANUAL",
+          label: localization.getString('manual'),
           icon: Icons.menu_book_rounded,
           color: const Color(0xFF8B5CF6),
         );
       case "5":
         return _NotificationStyle(
-          label: "REPORTE",
+          label: localization.getString('reporte'),
           icon: Icons.bar_chart_rounded,
           color: const Color(0xFFEF4444),
         );
       default:
         return _NotificationStyle(
-          label: "NOTIFICACIÓN",
+          label: localization.getString('notificacion'),
           icon: Icons.notifications_active_rounded,
           color: const Color(0xFF064DC3),
         );

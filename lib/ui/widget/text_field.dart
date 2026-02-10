@@ -5,7 +5,9 @@ Widget buildTextField({
   required String hint,
   required IconData icon,
   bool isPassword = false,
+  bool obscureText = false,
   bool isSuccess = false,
+  VoidCallback? onToggleVisibility,
   Widget? suffixIcon,
   Function(String)? onChanged,
   String? Function(String?)? validator,
@@ -14,7 +16,7 @@ Widget buildTextField({
     margin: const EdgeInsets.only(bottom: 5),
     child: TextFormField(
       controller: controller,
-      obscureText: isPassword,
+      obscureText: isPassword ? obscureText : false,
       onChanged: onChanged,
       validator: validator,
       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -26,8 +28,19 @@ Widget buildTextField({
           fontWeight: FontWeight.w400,
         ),
         prefixIcon: Icon(icon, color: const Color(0xFF064DC3), size: 20),
+        suffixIcon: isPassword 
+          ? IconButton(
+              icon: Icon(
+                obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                color: const Color(0xFF064DC3),
+                size: 20,
+              ),
+              onPressed: onToggleVisibility,
+            )
+          : (isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null),
         suffixIcon: suffixIcon ?? (isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null),
         filled: true,
+// ...
         fillColor: Colors.grey[50],
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

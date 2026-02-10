@@ -68,10 +68,24 @@ class _HomeViewState extends State<HomeView> {
                   GoogleMap(
                     mapType: viewModel.currentMapType,
                     initialCameraPosition: CameraPosition(
-                      target: viewModel.currentPosition != null
-                          ? LatLng(viewModel.currentPosition!.latitude,
-                              viewModel.currentPosition!.longitude)
-                          : LatLng(8.9824, -79.5199), 
+                      target: () {
+                        // 1. Check currentPosition (might be company if ViewModel finished quickly)
+                        if (viewModel.currentPosition != null) {
+                          return LatLng(viewModel.currentPosition!.latitude, viewModel.currentPosition!.longitude);
+                        }
+                        // 2. Check Company LatLog directly from Session for the very first frame
+                        final companyLatLog = CacheUserSession().companyLatLog;
+                        if (companyLatLog != null && companyLatLog.isNotEmpty) {
+                          final parts = companyLatLog.split(',');
+                          if (parts.length == 2) {
+                            final lat = double.tryParse(parts[0].trim());
+                            final lng = double.tryParse(parts[1].trim());
+                            if (lat != null && lng != null) return LatLng(lat, lng);
+                          }
+                        }
+                        // 3. Fallback
+                        return const LatLng(8.9824, -79.5199);
+                      }(),
                       zoom: 15,
                     ),
                     onMapCreated: viewModel.onMapCreated,
@@ -634,21 +648,15 @@ class _HomeViewState extends State<HomeView> {
                         icon: Icons.gavel_outlined,
                         onTap: () {
                           final schedulesModel = context.read<SchedulesViewModel>();
-                          if (schedulesModel.regulations.isNotEmpty) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => _FlyerStoryViewer(
-                                  flyers: schedulesModel.regulations, 
-                                  title: localization.getString('regulations'),
-                                ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => _FlyerStoryViewer(
+                                flyers: schedulesModel.regulations, 
+                                title: localization.getString('regulations'),
                               ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("No hay ${localization.getString('regulations').toLowerCase()} disponibles")),
-                            );
-                          }
+                            ),
+                          );
                         },
                       ),
                       _buildSubMenuItem(
@@ -656,21 +664,15 @@ class _HomeViewState extends State<HomeView> {
                         icon: Icons.menu_book_outlined,
                         onTap: () {
                           final schedulesModel = context.read<SchedulesViewModel>();
-                          if (schedulesModel.manuals.isNotEmpty) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => _FlyerStoryViewer(
-                                  flyers: schedulesModel.manuals, 
-                                  title: localization.getString('manual'),
-                                ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => _FlyerStoryViewer(
+                                flyers: schedulesModel.manuals, 
+                                title: localization.getString('manual'),
                               ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("No hay ${localization.getString('manual').toLowerCase()} disponibles")),
-                            );
-                          }
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -972,9 +974,9 @@ class _HomeViewState extends State<HomeView> {
                       ),
                       child: Row(
                         children: [
-                          _buildTabItem('FRECUENTES', model),
-                          _buildTabItem('EN TIEMPO', model),
-                          _buildTabItem('TODAS', model),
+                          _buildTabItem('filter_frequent', model, localization),
+                          _buildTabItem('filter_on_time', model, localization),
+                          _buildTabItem('filter_all', model, localization),
                         ],
                       ),
                     );
@@ -993,7 +995,7 @@ class _HomeViewState extends State<HomeView> {
                     
                     final routes = model.filteredRoutes;
 
-                    if (model.filterOption == 'TODAS') {
+                    if (model.filterOption == 'filter_all') {
                        final groups = model.groupedRoutes;
                        if (groups.isEmpty) {
                          return _buildEmptyState(Icons.search_off, "No hay rutas disponibles");
@@ -1009,15 +1011,15 @@ class _HomeViewState extends State<HomeView> {
                        );
                     } else {
                        if (routes.isEmpty) {
-                         String msg = model.filterOption == 'FRECUENTES' 
-                            ? "No tienes rutas recientes" 
-                            : "No hay rutas en tiempo ahora";
+                         String msg = model.filterOption == 'filter_frequent' 
+                            ? localization.getString('no_routes_segment') /* Or specific 'no_recent_routes' key if added */
+                            : localization.getString('no_routes_segment');
                          return _buildEmptyState(
-                            model.filterOption == 'FRECUENTES' ? Icons.history : Icons.timer_off, 
+                            model.filterOption == 'filter_frequent' ? Icons.history : Icons.timer_off, 
                             msg
                          );
                        }
-                       return _buildRouteList(context, routes, model);
+                       return _buildRouteList(context, routes, model, localization);
                     }
                   },
                 ),
@@ -1045,7 +1047,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildRouteList(BuildContext context, List<RouteData> routes, SchedulesViewModel model) {
+  Widget _buildRouteList(BuildContext context, List<RouteData> routes, SchedulesViewModel model, LanguageService localization) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       itemCount: routes.length,
@@ -1053,13 +1055,13 @@ class _HomeViewState extends State<HomeView> {
         final route = routes[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: _buildRouteTile(context, route, model),
+          child: _buildRouteTile(context, route, model, localization),
         );
       },
     );
   }
 
-  Widget _buildRouteTile(BuildContext context, RouteData route, SchedulesViewModel model) {
+  Widget _buildRouteTile(BuildContext context, RouteData route, SchedulesViewModel model, LanguageService localization) {
       final isSelected = model.selectedRoute?.claveruta == route.claveruta;
       final bool isActive = model.isRouteActiveNow(route);
 
@@ -1143,22 +1145,22 @@ class _HomeViewState extends State<HomeView> {
             children: [
               const SizedBox(height: 4),
               Text(
-                "Horario: ${route.tipo_ruta}",
+                "${localization.getString('schedule_label')}: ${localization.getString(route.tipo_ruta.toLowerCase())}",
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               Text(
-                "Tramo: ${route.tramo}",
+                "${localization.getString('route_label')}: ${localization.getString(route.tramo.toLowerCase())}",
                 style: TextStyle(fontSize: 11, color: Colors.grey[500]),
               ),
             ],
           ),
           trailing: Icon(Icons.info_outline_rounded, size: 20, color: isSelected ? const Color(0xFF064DC3) : Colors.grey[400]),
-          onTap: () => _showRouteDetailsModal(context, route, model),
+          onTap: () => _showRouteDetailsModal(context, route, model, localization),
         ),
       );
   }
 
-  void _showRouteDetailsModal(BuildContext context, RouteData route, SchedulesViewModel model) {
+  void _showRouteDetailsModal(BuildContext context, RouteData route, SchedulesViewModel model, LanguageService localization) {
     final bool isActive = model.isRouteActiveNow(route);
     
     showModalBottomSheet(
@@ -1234,11 +1236,11 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
             const SizedBox(height: 30),
-            _buildDetailRow(Icons.calendar_today_rounded, "Días de operación", model.getActiveDays(route.tipo_ruta)),
+            _buildDetailRow(Icons.calendar_today_rounded, localization.getString('days_label'), localization.getString(model.getActiveDays(route.dia_ruta ?? route.tipo_ruta))),
             const SizedBox(height: 20),
-            _buildDetailRow(Icons.access_time_filled_rounded, "Horario programado", route.tipo_ruta),
+            _buildDetailRow(Icons.access_time_filled_rounded, localization.getString('schedule_label'), localization.getString(route.tipo_ruta.toLowerCase())),
             const SizedBox(height: 20),
-            _buildDetailRow(Icons.alt_route_rounded, "Orientación del tramo", route.tramo),
+            _buildDetailRow(Icons.alt_route_rounded, localization.getString('route_label'), localization.getString(route.tramo.toLowerCase())),
             const Spacer(),
             Container(
               padding: const EdgeInsets.all(16),
@@ -1464,10 +1466,11 @@ class _HomeViewState extends State<HomeView> {
                         children: [
                           _buildTrackingPoint(
                             title: stop.nombre_parada,
-                            subtitle: isRouteActive ? status : "${localization.getString('date_label').split(' ')[0]}: ${stop.hora_parada}",
-                            state: status,
+                            subtitle: stop.horario,
+                            state: stop.estatus,
                             isRouteActive: isRouteActive,
                             isMyStop: isSelectedMyStop,
+                            localization: localization,
                           ),
                           if (index < stops.length - 1)
                             _buildTrackingLine(
@@ -1490,6 +1493,7 @@ class _HomeViewState extends State<HomeView> {
     required String title,
     required String subtitle,
     required String state,
+    required LanguageService localization,
     bool isRouteActive = true,
     bool isMyStop = false,
   }) {
@@ -1538,11 +1542,17 @@ class _HomeViewState extends State<HomeView> {
     // Override icon if it IS My Stop
     if (isMyStop) {
       icon = Container(
-        padding: const EdgeInsets.all(2),
-        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
         child: const Icon(Icons.stars_rounded, color: Colors.orange, size: 28),
       );
+      state = localization.getString('my_stop_label');
     }
+
+    final String translatedStatus = localization.getString(state);
 
     return Row(
       children: [
@@ -1553,13 +1563,18 @@ class _HomeViewState extends State<HomeView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                title,
+                translatedStatus.toUpperCase(),
                 style: TextStyle(
                   fontWeight: FontWeight.bold, 
                   fontSize: 15, 
                   color: !isRouteActive ? const Color(0xFF064DC3).withOpacity(0.5) : (state == 'Ya Realizada' ? Colors.black54 : Colors.black87)
                 ),
               ),
+              if (isRouteActive)
+                Text(
+                  localization.getString('view_details'),
+                  style: TextStyle(color: pointColor.withOpacity(0.8), fontSize: 10),
+                ),
               Text(
                 subtitle.toUpperCase(),
                 style: TextStyle(
@@ -1831,7 +1846,7 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildTabItem(String label, SchedulesViewModel model) {
+  Widget _buildTabItem(String label, SchedulesViewModel model, LanguageService localization) {
     final isSelected = model.filterOption == label;
     return Expanded(
       child: GestureDetector(
@@ -1851,7 +1866,7 @@ class _HomeViewState extends State<HomeView> {
             ] : [],
           ),
           child: Text(
-            label,
+            localization.getString(label),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: isSelected ? const Color(0xFF064DC3) : Colors.grey[600],
@@ -1880,21 +1895,21 @@ class _FlyerStories extends StatelessWidget {
         children: [
           if (model.bulletins.isNotEmpty)
             _StoryCircle(
-              title: "Comunicados",
+              title: context.read<LanguageService>().getString('announcements'),
               color: Colors.blue,
               icon: Icons.notifications_active_rounded,
               flyers: model.bulletins,
             ),
           if (model.regulations.isNotEmpty)
             _StoryCircle(
-              title: "Reglamentos",
+              title: context.read<LanguageService>().getString('regulations'),
               color: Colors.purple,
               icon: Icons.gavel_rounded,
               flyers: model.regulations,
             ),
           if (model.manuals.isNotEmpty)
             _StoryCircle(
-              title: "Manuales",
+              title: context.read<LanguageService>().getString('manual'),
               color: Colors.teal,
               icon: Icons.menu_book_rounded,
               flyers: model.manuals,
@@ -2001,13 +2016,30 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
         children: [
           PageView.builder(
             controller: _pageController,
-            itemCount: widget.flyers.length,
+            itemCount: widget.flyers.length == 0 ? 1 : widget.flyers.length,
             onPageChanged: (index) {
               setState(() => _currentIndex = index);
             },
             itemBuilder: (context, index) {
+              if (widget.flyers.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: Colors.white.withOpacity(0.5), size: 60),
+                      const SizedBox(height: 20),
+                      Text(
+                        context.read<LanguageService>().getString('no_flyers_to_show').replaceFirst('{title}', widget.title.toLowerCase()),
+                        style: const TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
               final flyer = widget.flyers[index];
               return Container(
+// ...
                 width: double.infinity,
                 height: double.infinity,
                 alignment: Alignment.center,
@@ -2067,22 +2099,23 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
             right: 10,
             child: Column(
               children: [
-                Row(
-                  children: List.generate(
-                    widget.flyers.length,
-                    (index) => Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: LinearProgressIndicator(
-                          value: index < _currentIndex ? 1.0 : (index == _currentIndex ? 0.0 : 0.0), // Simplified
-                          backgroundColor: Colors.white24,
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          minHeight: 2,
+                if (widget.flyers.isNotEmpty)
+                  Row(
+                    children: List.generate(
+                      widget.flyers.length,
+                      (index) => Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: LinearProgressIndicator(
+                            value: index < _currentIndex ? 1.0 : (index == _currentIndex ? 0.0 : 0.0), // Simplified
+                            backgroundColor: Colors.white24,
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                            minHeight: 2,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 15),
                 Row(
                   children: [
@@ -2095,16 +2128,18 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
                             widget.title.toUpperCase(),
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                           ),
-                          Text(
-                            widget.flyers[_currentIndex].nombre,
-                            style: const TextStyle(color: Colors.white, fontSize: 11),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            "Publicado: ${widget.flyers[_currentIndex].fecha_alta}",
-                            style: const TextStyle(color: Colors.white60, fontSize: 9),
-                          ),
+                          if (widget.flyers.isNotEmpty) ...[
+                            Text(
+                              widget.flyers[_currentIndex].nombre,
+                              style: const TextStyle(color: Colors.white, fontSize: 11),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              "${context.read<LanguageService>().getString('published_at')} ${widget.flyers[_currentIndex].fecha_alta}",
+                              style: const TextStyle(color: Colors.white60, fontSize: 9),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -2143,7 +2178,12 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
   Widget build(BuildContext context) {
     List<RouteData> displayedRoutes = [];
     if (_selectedTramo != null) {
-      displayedRoutes = widget.routes.where((r) => r.tramo == _selectedTramo).toList();
+      displayedRoutes = widget.routes.where((r) {
+        final t = r.tramo.toUpperCase();
+        if (_selectedTramo == 'entry') return t.contains('ENTRADA');
+        if (_selectedTramo == 'exit') return t.contains('SALIDA');
+        return false;
+      }).toList();
     }
 
     return Container(
@@ -2188,7 +2228,7 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                         ),
                       ),
                       Text(
-                        "${widget.routes.length} horarios disponibles",
+                        "${widget.routes.length} ${context.read<LanguageService>().getString('available_schedules')}",
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
@@ -2203,9 +2243,9 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
               children: [
-                _buildModernTramoChip('ENTRADA', Icons.login_rounded),
+                _buildModernTramoChip('entry', context.read<LanguageService>().getString('entry'), Icons.login_rounded),
                 const SizedBox(width: 10),
-                _buildModernTramoChip('SALIDA', Icons.logout_rounded),
+                _buildModernTramoChip('exit', context.read<LanguageService>().getString('exit'), Icons.logout_rounded),
               ],
             ),
           ),
@@ -2219,7 +2259,7 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                   if (displayedRoutes.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text("No hay rutas en este tramo", style: TextStyle(color: Colors.grey)),
+                      child: Text("No routes available"), // Fallback if tramo filtering results in empty, but tramo names ENTRADA/SALIDA are usually fixed.
                     )
                   else
                     ...displayedRoutes.map((route) {
@@ -2244,7 +2284,7 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                             ],
                           ),
                           title: Text(
-                            "Turno: ${route.tipo_ruta}",
+                            "${context.read<LanguageService>().getString('shift_label')}: ${context.read<LanguageService>().getString(route.tipo_ruta.toLowerCase())}",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -2252,7 +2292,7 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                             ),
                           ),
                           subtitle: Text(
-                            "Toque para ver detalles", 
+                            context.read<LanguageService>().getString('view_details'), 
                             style: TextStyle(fontSize: 11, color: Colors.grey[500])
                           ),
                           trailing: const Icon(Icons.info_outline_rounded, size: 20, color: Colors.grey),
@@ -2277,11 +2317,11 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
     );
   }
 
-  Widget _buildModernTramoChip(String label, IconData icon) {
-    final isSelected = _selectedTramo == label;
+  Widget _buildModernTramoChip(String key, String label, IconData icon) {
+    final isSelected = _selectedTramo == key;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedTramo = isSelected ? null : label),
+        onTap: () => setState(() => _selectedTramo = isSelected ? null : key),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(

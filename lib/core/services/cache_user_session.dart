@@ -84,6 +84,9 @@ class CacheUserSession {
 
   int get notificationsCount => _prefs?.getInt('notificationsCount') ?? 0;
   set notificationsCount(int value) => _prefs?.setInt('notificationsCount', value);
+
+  String get userLanguage => _prefs?.getString('userLanguage') ?? 'ES';
+  set userLanguage(String value) => _prefs?.setString('userLanguage', value);
   // endregion USER DATA
 
   Future<void> clear() async {

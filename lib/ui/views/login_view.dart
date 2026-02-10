@@ -137,6 +137,9 @@ class _LoginViewState extends State<LoginView> {
                                     controller: viewModel.passwordController,
                                     hint: localization.getString('pass_label'),
                                     icon: Icons.lock_outline,
+                                    isPassword: true,
+                                    obscureText: viewModel.obscurePassword,
+                                    onToggleVisibility: viewModel.togglePasswordVisibility,
                                     isPassword: viewModel.isPasswordObscured,
                                     suffixIcon: IconButton(
                                       icon: Icon(
@@ -253,9 +256,23 @@ class _LoginViewState extends State<LoginView> {
                                       const SizedBox(height: 15),
                                       SizedBox(
                                         width: double.infinity,
-                                        child: ElevatedButton(
-                                          onPressed: () {},
-                                          child: const Text('Action for Company 1'),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            // QR logic placeholder
+                                          },
+                                          icon: const Icon(Icons.qr_code_scanner),
+                                          label: Text(
+                                            localization.getString('scan_qr'),
+                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.white,
+                                            foregroundColor: const Color(0xFF064DC3),
+                                            side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                            elevation: 0,
+                                          ),
                                         ),
                                       ),
                                     ],

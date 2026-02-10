@@ -1,7 +1,11 @@
+import 'package:busmen_panama/core/services/cache_user_session.dart';
 import 'package:flutter/material.dart';
 
 class LanguageService extends ChangeNotifier {
-  String _currentLanguage = 'ES';
+  final _session = CacheUserSession();
+  
+  String get _currentLanguage => _session.userLanguage;
+
   String get currentLanguage => _currentLanguage;
 
   final Map<String, Map<String, String>> _localizedValues = {
@@ -107,6 +111,65 @@ class LanguageService extends ChangeNotifier {
       'my_stop_label': 'MI PARADA',
       'stop_number': 'Parada #',
       'select_stop_desc': 'Selecciona el punto donde abordarás la unidad para darte prioridad.',
+
+      // New Refinements
+      'search_hint': 'Buscar...',
+      'no_results': 'No se encontraron resultados',
+      'loading_msg': 'Cargando...',
+      'error_image': 'Error al cargar imagen',
+      'published_at': 'Publicado:',
+      'view_details': 'Toque para ver detalles',
+      'filter_all': 'TODAS',
+      'filter_frequent': 'FRECUENTES',
+      'filter_on_time': 'EN TIEMPO',
+      'status_pending': 'Aún no Realizada',
+      'status_at_stop': 'Unidad en el punto',
+      'status_completed': 'Ya Realizada',
+      'status_in_transit': 'En Camino',
+      'available_schedules': 'horarios disponibles',
+      'no_routes_segment': 'No hay rutas en este tramo',
+      'schedule_not_defined': 'Horario no definido',
+      'monday_friday': 'Lunes a Viernes',
+      'saturdays': 'Sábados',
+      'sunday': 'Domingos',
+      'every_day': 'Todos los días',
+      'specific_schedule': 'Horario específico',
+      'contact_info': 'Información de Contacto',
+      'incident_details': 'Detalles del Incidente',
+      'object_description': 'Descripción del Objeto',
+      'search_route_hint': 'Buscar ruta...',
+      'no_flyers_to_show': 'No hay {title} que mostrar',
+      'scan_qr': 'ESCANEAR CÓDIGO QR',
+      'no_notifications': 'No hay notificaciones',
+      'notify_msg': 'Te avisaremos cuando haya novedades',
+      'retry': 'REINTENTAR',
+      'understood': 'ENTENDIDO',
+      'close_btn': 'CERRAR',
+      'comunicado': 'COMUNICADO',
+      'reglamento': 'REGLAMENTO',
+      'reporte': 'REPORTE',
+      'notificacion': 'NOTIFICACIÓN',
+      'change_route': 'Cambiar Ruta',
+      'active': 'ACTIVA',
+      'out_of_schedule': 'FUERA DE HORARIO',
+      'assigned_unit': 'UNIDAD ASIGNADA',
+      'select_route_msg': 'Seleccione una ruta para ver los horarios',
+      'no_stops_found': 'No se encontraron paradas para esta ruta',
+      'shift_label': 'Turno',
+      'on_time': 'A TIEMPO',
+      'delayed': 'RETRASADO',
+      'schedule_label': 'Horario',
+      'select_a_route': 'SELECCIONA UNA RUTA',
+      'days_label': 'Días de Operación',
+      'matutino': 'Matutino',
+      'vespertino': 'Vespertino',
+      'nocturno': 'Nocturno',
+      'LUN-VIE': 'Lunes a Viernes',
+      'SAB': 'Sábados',
+      'DOM': 'Domingos',
+      'LUN-DOM': 'Todos los días',
+      'entry': 'Entrada',
+      'exit': 'Salida',
     },
     'EN': {
       // Login
@@ -210,20 +273,78 @@ class LanguageService extends ChangeNotifier {
       'my_stop_label': 'MY STOP',
       'stop_number': 'Stop #',
       'select_stop_desc': 'Select the point where you will board the unit to prioritize it.',
+
+      // New Refinements
+      'search_hint': 'Search...',
+      'no_results': 'No results found',
+      'loading_msg': 'Loading...',
+      'error_image': 'Error loading image',
+      'published_at': 'Published:',
+      'view_details': 'Tap for details',
+      'filter_all': 'ALL',
+      'filter_frequent': 'FREQUENT',
+      'filter_on_time': 'ON TIME',
+      'status_pending': 'Pending',
+      'status_at_stop': 'At Stop',
+      'status_completed': 'Completed',
+      'status_in_transit': 'In Transit',
+      'available_schedules': 'available schedules',
+      'no_routes_segment': 'No routes in this segment',
+      'schedule_not_defined': 'Schedule not defined',
+      'monday_friday': 'Monday to Friday',
+      'saturdays': 'Saturdays',
+      'sunday': 'Sundays',
+      'every_day': 'Every day',
+      'specific_schedule': 'Specific schedule',
+      'contact_info': 'Contact Information',
+      'incident_details': 'Incident Details',
+      'object_description': 'Item Description',
+      'search_route_hint': 'Search route...',
+      'no_flyers_to_show': 'No {title} to show',
+      'scan_qr': 'SCAN QR CODE',
+      'no_notifications': 'No notifications',
+      'notify_msg': "We'll notify you when there's news",
+      'retry': 'RETRY',
+      'understood': 'UNDERSTOOD',
+      'close_btn': 'CLOSE',
+      'comunicado': 'ANNOUNCEMENT',
+      'reglamento': 'REGULATION',
+      'reporte': 'REPORT',
+      'notificacion': 'NOTIFICATION',
+      'change_route': 'Change Route',
+      'active': 'ACTIVE',
+      'out_of_schedule': 'OUT OF SCHEDULE',
+      'assigned_unit': 'ASSIGNED UNIT',
+      'select_route_msg': 'Select a route to view schedules',
+      'no_stops_found': 'No stops found for this route',
+      'shift_label': 'Shift',
+      'on_time': 'ON TIME',
+      'delayed': 'DELAYED',
+      'schedule_label': 'Schedule',
+      'select_a_route': 'SELECT A ROUTE',
+      'days_label': 'Operation Days',
+      'matutino': 'Morning',
+      'vespertino': 'Afternoon',
+      'nocturno': 'Night',
+      'LUN-VIE': 'Monday to Friday',
+      'SAB': 'Saturdays',
+      'DOM': 'Sundays',
+      'LUN-DOM': 'Every day',
+      'entry': 'Entry',
+      'exit': 'Exit',
     },
   };
 
   String getString(String key) => _localizedValues[_currentLanguage]?[key] ?? key;
 
   void setLanguage(String lang) {
-    if (_currentLanguage != lang) {
-      _currentLanguage = lang;
+    if (_session.userLanguage != lang) {
+      _session.userLanguage = lang;
       notifyListeners();
     }
   }
 
   void toggleLanguage() {
-    _currentLanguage = _currentLanguage == 'ES' ? 'EN' : 'ES';
-    notifyListeners();
+    setLanguage(_session.userLanguage == 'ES' ? 'EN' : 'ES');
   }
 }
