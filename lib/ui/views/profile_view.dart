@@ -1,3 +1,4 @@
+import 'package:busmen_panama/core/services/cache_user_session.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -181,6 +182,7 @@ class ProfileView extends StatelessWidget {
                   const SizedBox(height: 30),
                   
                   // Delete Button - Less intrusive
+                  CacheUserSession().isCopaair?
                   TextButton.icon(
                     onPressed: () => viewModel.deleteUser(context),
                     icon: viewModel.isDeleting
@@ -202,7 +204,8 @@ class ProfileView extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       backgroundColor: Colors.red.withOpacity(0.05),
                     ),
-                  ),
+                  )
+                  :const SizedBox(),
                   const SizedBox(height: 30),
                 ],
               ),
