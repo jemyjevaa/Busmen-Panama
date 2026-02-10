@@ -8,6 +8,7 @@ Widget buildTextField({
   bool obscureText = false,
   bool isSuccess = false,
   VoidCallback? onToggleVisibility,
+  Widget? suffixIcon,
   Function(String)? onChanged,
   String? Function(String?)? validator,
 }) {
@@ -37,6 +38,7 @@ Widget buildTextField({
               onPressed: onToggleVisibility,
             )
           : (isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null),
+        suffixIcon: suffixIcon ?? (isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null),
         filled: true,
 // ...
         fillColor: Colors.grey[50],

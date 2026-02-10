@@ -140,6 +140,17 @@ class _LoginViewState extends State<LoginView> {
                                     isPassword: true,
                                     obscureText: viewModel.obscurePassword,
                                     onToggleVisibility: viewModel.togglePasswordVisibility,
+                                    isPassword: viewModel.isPasswordObscured,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        viewModel.isPasswordObscured
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                        color: const Color(0xFF064DC3),
+                                        size: 20,
+                                      ),
+                                      onPressed: viewModel.togglePasswordVisibility,
+                                    ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return localization.getString('fill_all_fields');
@@ -210,7 +221,7 @@ class _LoginViewState extends State<LoginView> {
                                   const SizedBox(height: 30),
                                   // Login Button (Shared)
                                   viewModel.loadingLogIn?
-                                      Center(
+                                      const Center(
                                       child: CircularProgressIndicator(),
                                       )
                                       :SizedBox(
@@ -264,28 +275,24 @@ class _LoginViewState extends State<LoginView> {
                                           ),
                                         ),
                                       ),
-                                    ] else if (CacheUserSession().isCopaair) ...[
-                                      const SizedBox(height: 15),
-                                      RegisterButton(
-                                        viewModel: viewModel,
-                                        localization: localization,
-                                      ),
-
-                                      const SizedBox(height: 15),
-                                      RecoveryButton(
-                                          viewModel: viewModel,
-                                          localization: localization
-                                      ),
                                     ],
                                   ],
+                                  const SizedBox(height: 20),
+                                  RecoveryButton(
+                                    viewModel: viewModel,
+                                    localization: localization,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  RegisterButton(
+                                    viewModel: viewModel,
+                                    localization: localization,
+                                  ),
                                 ],
                               ),
-                            )
+                            ),
                           ],
-                          ),
                         ),
-                        
-                      const SizedBox(height: 40), // Safe bottom margin
+                      ),
                     ],
                   ),
                 ),
@@ -297,30 +304,24 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  Widget _buildLanguageOption(
-    BuildContext context,
-    String label,
-    bool isActive,
-    VoidCallback onTap,
-  ) {
+  Widget _buildLanguageOption(BuildContext context, String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF064DC3) : Colors.transparent,
+          color: isSelected ? const Color(0xFF064DC3) : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            color: isSelected ? Colors.white : Colors.grey[600],
+            fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: isActive ? Colors.white : Colors.grey[600],
           ),
         ),
       ),
     );
   }
-
 }
