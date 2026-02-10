@@ -36,9 +36,9 @@ class ResponseNotifications {
   factory ResponseNotifications.fromJson(Map<String, dynamic> json) {
     return ResponseNotifications(
       respuesta: json['respuesta'] ?? '',
-      datos: (json['datos'] as List?)
-              ?.map((item) => AppNotification.fromJson(item))
-              .toList() ??
+      datos: json['respuesta'] == "error"? []:(json['datos'] as List?)
+          ?.map((item) => AppNotification.fromJson(item))
+          .toList() ??
           [],
     );
   }

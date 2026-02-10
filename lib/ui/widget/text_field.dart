@@ -38,7 +38,6 @@ Widget buildTextField({
               onPressed: onToggleVisibility,
             )
           : (isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null),
-        suffixIcon: suffixIcon ?? (isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null),
         filled: true,
 // ...
         fillColor: Colors.grey[50],

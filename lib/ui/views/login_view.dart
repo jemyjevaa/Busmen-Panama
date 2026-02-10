@@ -140,7 +140,6 @@ class _LoginViewState extends State<LoginView> {
                                     isPassword: true,
                                     obscureText: viewModel.obscurePassword,
                                     onToggleVisibility: viewModel.togglePasswordVisibility,
-                                    isPassword: viewModel.isPasswordObscured,
                                     suffixIcon: IconButton(
                                       icon: Icon(
                                         viewModel.isPasswordObscured
