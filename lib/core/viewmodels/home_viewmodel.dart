@@ -216,7 +216,7 @@ class HomeViewModel extends ChangeNotifier {
     _session.userSide = 1; // Reset side preference
     
     // OneSignal cleanup
-    SocketService().removeOneSignalTags();
+    //SocketService().removeOneSignalTags();
     
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
