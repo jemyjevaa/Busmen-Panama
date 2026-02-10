@@ -32,10 +32,18 @@ class LoginViewModel extends ChangeNotifier {
   bool loadingLogIn = false;
   bool loadingCreateUser = false;
   bool loadingRecoveryPwd = false;
+  
+  bool _isPasswordObscured = true;
+  bool get isPasswordObscured => _isPasswordObscured;
 
   LoginViewModel() {
     // Keep listener as backup, but we'll use direct calls for better reliability
     userController.addListener(_onUserChanged);
+  }
+
+  void togglePasswordVisibility() {
+    _isPasswordObscured = !_isPasswordObscured;
+    notifyListeners();
   }
 
   void identifyCompany(String val) {

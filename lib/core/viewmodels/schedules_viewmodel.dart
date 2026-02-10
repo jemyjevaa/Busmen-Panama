@@ -299,7 +299,7 @@ class SchedulesViewModel extends ChangeNotifier {
       final response = await _requestService.handlingRequestParsed<ResponseInfoRoutes>(
         urlParam: _urlService.getUrlInfoRoutes(),
         params: {
-          'tipo_ruta': _session.userSide == 1 ? 'EXT' : '1', 
+          'tipo_ruta': 'EXT',
           'empresa': _session.companyClave ?? '',
         },
         method: 'POST',
@@ -331,7 +331,7 @@ class SchedulesViewModel extends ChangeNotifier {
     try {
       print("DEBUG - fetchFlyersByCategory: tipo=$tipo, route=$routeClave");
       final response = await _requestService.handlingRequestParsed<ResponseFlyers>(
-        urlParam: _urlService.getUrlInfoFlyers(),
+        urlParam: _urlService.getUrlAnnouncements(),
         params: {
           'tipo_flyer': tipo,
           'claveruta': routeClave,

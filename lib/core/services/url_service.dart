@@ -32,6 +32,15 @@ class UrlService {
 
 
   late bool isExisted = nombres.contains(CacheUserSession().isCopaair);
+
+
+  String getUrlSocket() => _urlSocket;
+  String getUrlDirections() => _urlDirections;
+  String getUrlInfoPositions() => "$_urlBaseTracking$_positions";
+  String getUrlInfoFlyers() => "$_urlBaseLectorasPan$_infoFlyers";
+  String getUrlInfoNotifications() => "$_urlBaseLectorasPan$_infoNotifications";
+  String getUrlLostObjects() => "$_urlBasegGeovoy$_lostObjects";
+
   
   bool get isSpecialCompany {
     final company = CacheUserSession().companyClave?.toLowerCase() ?? '';
@@ -68,11 +77,12 @@ class UrlService {
       : "$_urlBaseLectorasPan$_infoUnit";
   }
 
-  String getUrlSocket() => _urlSocket;
-  String getUrlDirections() => _urlDirections;
-  String getUrlInfoPositions() => "$_urlBaseTracking$_positions";
-  String getUrlInfoFlyers() => "$_urlBaseLectorasPan$_infoFlyers";
-  String getUrlInfoNotifications() => "$_urlBaseLectorasPan$_infoNotifications";
+  // region INFORMATION
+  String getUrlAnnouncements(){
+    return CacheUserSession().isCopaair? "$_urlBasegGeovoy$_flyer":"$_urlBaseLectorasPan$_flyer";
+  }
+  // endregion INFORMATION
+
 
   String getUrlChangePassword() {
     return CacheUserSession().isCopaair 
@@ -80,7 +90,6 @@ class UrlService {
       : "$_urlBaseLectorasPan$_changePassword";
   }
 
-  String getUrlLostObjects() => "$_urlBasegGeovoy$_lostObjects";
   String getUrlNewUser(){
     return "$_urlBasegGeovoy$_newUser";
   }
@@ -93,10 +102,5 @@ class UrlService {
     return "$_urlBaseLectorasPan$_changePwd";
   }
 
-  // region INFORMATION
-  String getUrlAnnouncements(){
-    return CacheUserSession().isCopaair? "$_urlBasegGeovoy$_flyer":"$_urlBaseLectorasPan$_flyer";
-  }
-  // endregion INFORMATION
 
 }

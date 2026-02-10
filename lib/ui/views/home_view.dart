@@ -679,7 +679,7 @@ class _HomeViewState extends State<HomeView> {
 
                 if (viewModel.userSide == 2) ...[
                   const SizedBox(height: 10),
-                  _buildDrawerItem(
+                  /*_buildDrawerItem(
                     icon: Icons.delete_outline,
                     title: localization.getString('delete_user'),
                     onTap: () {
@@ -705,7 +705,7 @@ class _HomeViewState extends State<HomeView> {
                       );
                     },
                     isDestructive: true,
-                  ),
+                  ),*/
                 ],
                 
               ],
