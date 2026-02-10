@@ -1,9 +1,6 @@
-import 'package:busmen_panama/ui/views/announcements_view.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
-import 'package:busmen_panama/ui/views/regulation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';

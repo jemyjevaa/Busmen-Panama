@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:busmen_panama/core/services/cache_user_session.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -162,7 +163,7 @@ class SocketService {
   }
 
   // region OneSignal
-  static const String _oneSignalAppId = "0749cbc5-802c-42fe-8a70-7f9dc7c2253f";
+  static final String _oneSignalAppId = CacheUserSession().isCopaair? "9f54ce30-77a4-47ec-b188-d0bde7b3a2ac": "0749cbc5-802c-42fe-8a70-7f9dc7c2253f";
 
   Future<void> initOneSignal() async {
     try {
