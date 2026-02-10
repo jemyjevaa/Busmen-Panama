@@ -3,6 +3,7 @@ import 'package:busmen_panama/ui/views/login_view.dart';
 import 'package:busmen_panama/ui/views/regulation_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
@@ -17,6 +18,7 @@ import 'package:busmen_panama/core/services/models/info_schedules_model.dart'; /
 
 
 import '../../core/services/cache_user_session.dart';
+import '../../core/services/socket_service.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -781,6 +783,7 @@ class _HomeViewState extends State<HomeView> {
     return InkWell(
       onTap: () {
         CacheUserSession().clear();
+        SocketService().removeOneSignalTags();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const LoginView()),
