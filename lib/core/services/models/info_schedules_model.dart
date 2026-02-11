@@ -81,6 +81,7 @@ class StopData {
   final double latitud;
   final double longitud;
   final int numero_parada; // Added for ordering & tracking
+  final String? url_imagen; // Added for stop photo
 
   StopData({
     required this.claveruta,
@@ -91,6 +92,7 @@ class StopData {
     required this.latitud,
     required this.longitud,
     required this.numero_parada,
+    this.url_imagen,
   });
 
   factory StopData.fromJson(Map<String, dynamic> json) {
@@ -103,6 +105,7 @@ class StopData {
       latitud: double.tryParse(json['latitud']?.toString() ?? '0') ?? 0.0,
       longitud: double.tryParse(json['longitud']?.toString() ?? '0') ?? 0.0,
       numero_parada: int.tryParse(json['numero_parada']?.toString() ?? '0') ?? 0,
+      url_imagen: json['url_imagen'] ?? json['foto'] ?? json['imagen'] ?? json['url_foto'] ?? json['url'],
     );
   }
 }

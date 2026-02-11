@@ -10,33 +10,59 @@ class GoogleDirectionsService {
   Future<List<LatLng>> getRoutePolyline(List<LatLng> stops) async {
     if (stops.length < 2) return stops;
 
-    final origin = "${stops.first.latitude},${stops.first.longitude}";
-    final destination = "${stops.last.latitude},${stops.last.longitude}";
+    List<LatLng> allPolylinePoints = [];
+    const int maxWaypointsPerRequest = 20; // Using a safe limit for waypoints
+
+    try {
+      for (int i = 0; i < stops.length - 1; i += maxWaypointsPerRequest) {
+        int end = (i + maxWaypointsPerRequest < stops.length) 
+            ? i + maxWaypointsPerRequest 
+            : stops.length - 1;
+        
+        // If we only have 1 point left, we can't make a segment
+        if (i == end) break;
+
+        final segmentPoints = await _fetchRouteSegment(stops.sublist(i, end + 1));
+        allPolylinePoints.addAll(segmentPoints);
+      }
+      
+      if (allPolylinePoints.isNotEmpty) {
+        return allPolylinePoints;
+      }
+    } catch (e) {
+      print("Error in GoogleDirectionsService (segmentation): $e");
+    }
     
-    // Add intermediate stops as waypoints
+    return stops; // Fallback to straight lines
+  }
+
+  Future<List<LatLng>> _fetchRouteSegment(List<LatLng> segmentStops) async {
+    if (segmentStops.length < 2) return segmentStops;
+
+    final origin = "${segmentStops.first.latitude},${segmentStops.first.longitude}";
+    final destination = "${segmentStops.last.latitude},${segmentStops.last.longitude}";
+    
     String waypoints = "";
-    if (stops.length > 2) {
-      waypoints = "&waypoints=" + stops.getRange(1, stops.length - 1)
+    if (segmentStops.length > 2) {
+      waypoints = "&waypoints=" + segmentStops.getRange(1, segmentStops.length - 1)
           .map((p) => "${p.latitude},${p.longitude}")
           .join('|');
     }
 
     final url = "${_urlService.getUrlDirections()}?origin=$origin&destination=$destination$waypoints&key=$_apiKey";
 
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final polylinePoints = data['routes'][0]['overview_polyline']['points'];
-          return _decodePolyline(polylinePoints);
-        }
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['status'] == 'OK') {
+        final polylinePoints = data['routes'][0]['overview_polyline']['points'];
+        return _decodePolyline(polylinePoints);
+      } else {
+        print("Directions API Error (${data['status']}): ${data['error_message'] ?? 'No message'}");
       }
-    } catch (e) {
-      print("Error in GoogleDirectionsService: $e");
     }
     
-    return stops; // Fallback to straight lines
+    return segmentStops; // Fallback for this segment
   }
 
   List<LatLng> _decodePolyline(String encoded) {

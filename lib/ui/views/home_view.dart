@@ -25,18 +25,36 @@ class HomeView extends StatefulWidget {
   State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   bool _isMapMenuOpen = false;
   BitmapDescriptor? _busIcon;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadCustomMarkers();
     // Initialize location access
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().getUserLocation();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final schedulesViewModel = context.read<SchedulesViewModel>();
+      if (schedulesViewModel.selectedRoute != null) {
+        print("🔄 App resumed: Refreshing unit position...");
+        schedulesViewModel.fetchLastPosition(schedulesViewModel.selectedRoute!.claveruta);
+      }
+    }
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -94,7 +112,9 @@ class _HomeViewState extends State<HomeView> {
                           if (parts.length == 2) {
                             final lat = double.tryParse(parts[0].trim());
                             final lng = double.tryParse(parts[1].trim());
-                            if (lat != null && lng != null) return LatLng(lat, lng);
+                            if (lat != null && lng != null) {
+                              return LatLng(lat, lng);
+                            }
                           }
                         }
                         // 3. Fallback
@@ -106,7 +126,7 @@ class _HomeViewState extends State<HomeView> {
                     myLocationEnabled: true,
                     myLocationButtonEnabled: true,
                     padding: const EdgeInsets.only(top: 100),
-                    markers: _buildMapMarkers(schedulesViewModel),
+                    markers: _buildMapMarkers(schedulesViewModel, localization, schedulesViewModel.selectedRoute),
                     polylines: _buildMapPolylines(schedulesViewModel),
                   ),
 
@@ -184,6 +204,28 @@ class _HomeViewState extends State<HomeView> {
                       ],
                     ),
                   ),
+                  
+                  // Follow Unit Button
+                  if (schedulesViewModel.unit != null && 
+                      schedulesViewModel.selectedRoute != null && 
+                      schedulesViewModel.isRouteActiveNow(schedulesViewModel.selectedRoute!))
+                    Positioned(
+                      top: 135,
+                      left: 20,
+                      child: _buildCircleButton(
+                        icon: Icons.navigation_rounded,
+                        onTap: () {
+                          final unit = schedulesViewModel.unit;
+                          if (unit != null) {
+                            final lat = double.tryParse(unit.lat) ?? 0.0;
+                            final lon = double.tryParse(unit.lon) ?? 0.0;
+                            if (lat != 0.0 && lon != 0.0) {
+                              viewModel.moveCameraToPosition(LatLng(lat, lon), zoom: 16.5);
+                            }
+                          }
+                        },
+                      ),
+                    ),
 
                   // Bottom Route Selection UI
                   Positioned(
@@ -207,11 +249,11 @@ class _HomeViewState extends State<HomeView> {
                                     }
                                   },
                                   child: Container(
-                                    height: 65,
-                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    height: 75,
+                                    padding: const EdgeInsets.symmetric(horizontal: 18),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
-                                      borderRadius: BorderRadius.circular(35),
+                                      borderRadius: BorderRadius.circular(20), // Less "pill", more search-bar like
                                       boxShadow: [
                                         BoxShadow(
                                           color: Colors.black.withOpacity(0.12),
@@ -223,69 +265,79 @@ class _HomeViewState extends State<HomeView> {
                                     ),
                                     child: Row(
                                       children: [
-                                        Container(
-                                          width: 42,
-                                          height: 42,
-                                          decoration: BoxDecoration(
-                                            color: (isRouteActive ? const Color(0xFF064DC3) : Colors.orange).withOpacity(0.1),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                            isRouteActive ? Icons.radar_rounded : Icons.history_rounded,
-                                            color: isRouteActive ? const Color(0xFF064DC3) : Colors.orange[800],
-                                            size: 22,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 15),
                                         Expanded(
                                           child: Column(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                selectedRoute?.nombre ?? localization.getString('route_not_selected'),
-                                                style: const TextStyle(
-                                                  color: Color(0xFF333333),
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
                                               Row(
                                                 children: [
-                                                  if (isRouteActive) const _BlinkingDot(),
-                                                  Text(
-                                                    isRouteActive ? "RASTREO EN VIVO" : "FUERA DE HORARIO",
-                                                    style: TextStyle(
-                                                      color: isRouteActive ? Colors.green[700] : Colors.orange[800],
-                                                      fontWeight: FontWeight.w900,
-                                                      fontSize: 9,
-                                                      letterSpacing: 0.5,
+                                                  Expanded(
+                                                    child: Text(
+                                                      selectedRoute?.nombre ?? localization.getString('route_not_selected'),
+                                                      style: const TextStyle(
+                                                        color: Color(0xFF333333),
+                                                        fontWeight: FontWeight.w900,
+                                                        fontSize: 15,
+                                                        letterSpacing: -0.2,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
                                                     ),
                                                   ),
-                                                  if (isRouteActive && schedulesViewModel.getCurrentStop() != null) ...[
-                                                    const SizedBox(width: 5),
-                                                    const Text("•", style: TextStyle(color: Colors.grey, fontSize: 10)),
-                                                    const SizedBox(width: 5),
-                                                    Expanded(
-                                                      child: Text(
-                                                        schedulesViewModel.getCurrentStop()!.nombre_parada,
-                                                        style: const TextStyle(
-                                                          color: Color(0xFF064DC3),
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 9,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
+                                                  if (isRouteActive) ...[
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.green[50],
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        border: Border.all(color: Colors.green[200]!, width: 0.5),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          const _BlinkingDot(),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            "VIVO",
+                                                            style: TextStyle(
+                                                              color: Colors.green[700],
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 8,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ],
                                                 ],
                                               ),
+                                              const SizedBox(height: 4),
+                                              if (isRouteActive && schedulesViewModel.getCurrentStop() != null)
+                                                Text(
+                                                  "${localization.getString('current_stop_label')}: ${schedulesViewModel.getCurrentStop()!.nombre_parada}",
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF064DC3),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 11,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                )
+                                              else
+                                                Text(
+                                                  isRouteActive ? localization.getString('live_tracking') : "FUERA DE HORARIO",
+                                                  style: TextStyle(
+                                                    color: isRouteActive ? Colors.grey[600] : Colors.orange[800],
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
                                             ],
                                           ),
                                         ),
+                                        const SizedBox(width: 10),
                                         Icon(Icons.unfold_more_rounded, color: Colors.grey[400], size: 20),
                                       ],
                                     ),
@@ -705,6 +757,23 @@ class _HomeViewState extends State<HomeView> {
                   ),
                 ),
 
+                const SizedBox(height: 10),
+                _buildDrawerItem(
+                  icon: Icons.language_outlined,
+                  title: localization.getString('switch_language'),
+                  trailing: Text(
+                    localization.currentLanguage == 'ES' ? 'ES' : 'EN',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: hexColor(CacheUserSession().colorOne),
+                      fontSize: 12,
+                    ),
+                  ),
+                  onTap: () {
+                    localization.toggleLanguage();
+                  },
+                ),
+
                 if (viewModel.userSide == 2) ...[
                   const SizedBox(height: 10),
                   /*_buildDrawerItem(
@@ -755,6 +824,7 @@ class _HomeViewState extends State<HomeView> {
     required String title,
     required VoidCallback onTap,
     bool isDestructive = false,
+    Widget? trailing,
   }) {
     final color = isDestructive ? Colors.red[700]! : const Color(0xFF064DC3);
     final bgColor = isDestructive ? Colors.red.withOpacity(0.1) : const Color(0xFF064DC3).withOpacity(0.1);
@@ -780,7 +850,7 @@ class _HomeViewState extends State<HomeView> {
           letterSpacing: 0.5,
         ),
       ),
-      trailing: isDestructive ? null : const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+      trailing: trailing ?? (isDestructive ? null : const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey)),
       onTap: onTap,
     );
   }
@@ -947,11 +1017,14 @@ class _HomeViewState extends State<HomeView> {
   void _showRouteSelectionSheet(BuildContext context, HomeViewModel homeViewModel, LanguageService localization) {
     final schedulesViewModel = Provider.of<SchedulesViewModel>(context, listen: false);
     
+    // Reset search when opening
+    schedulesViewModel.setSearchQuery('');
+    
     // Default to 'FRECUENTES' if there are recent routes, otherwise 'EN TIEMPO' or 'TODAS'
     if (schedulesViewModel.recentRoutes.isNotEmpty) {
-      schedulesViewModel.setFilterOption('FRECUENTES');
+      schedulesViewModel.setFilterOption('filter_frequent');
     } else {
-      schedulesViewModel.setFilterOption('EN TIEMPO');
+      schedulesViewModel.setFilterOption('filter_on_time');
     }
 
     showModalBottomSheet(
@@ -988,6 +1061,33 @@ class _HomeViewState extends State<HomeView> {
               ),
               const SizedBox(height: 20),
               
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    onChanged: (value) => schedulesViewModel.setSearchQuery(value),
+                    decoration: InputDecoration(
+                      hintText: localization.getString('search_route_hint') ?? "Buscar ruta...",
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF064DC3)),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    ),
+                  ),
+                ),
+              ),
+
               // Premium Tab Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1025,7 +1125,7 @@ class _HomeViewState extends State<HomeView> {
                     if (model.filterOption == 'filter_all') {
                        final groups = model.groupedRoutes;
                        if (groups.isEmpty) {
-                         return _buildEmptyState(Icons.search_off, "No hay rutas disponibles");
+                         return _buildEmptyState(Icons.search_off, model.searchQuery.isEmpty ? "No hay rutas disponibles" : "No se encontraron rutas");
                        }
                        return ListView.builder(
                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -1170,7 +1270,13 @@ class _HomeViewState extends State<HomeView> {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  localization.getString(model.getActiveDaysForRoute(route)),
+                  style: TextStyle(fontSize: 10, color: Colors.blue[700], fontWeight: FontWeight.bold),
+                ),
+              ),
               Text(
                 "${localization.getString('schedule_label')}: ${localization.getString(route.tipo_ruta.toLowerCase())}",
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -1262,19 +1368,14 @@ class _HomeViewState extends State<HomeView> {
                 color: Color(0xFF064DC3),
               ),
             ),
-            const SizedBox(height: 30),
-            _buildDetailRow(Icons.calendar_today_rounded, localization.getString('days_label'), localization.getString(model.getActiveDays(route.dia_ruta ?? route.tipo_ruta))),
-            const SizedBox(height: 20),
-            _buildDetailRow(Icons.access_time_filled_rounded, localization.getString('schedule_label'), localization.getString(route.tipo_ruta.toLowerCase())),
-            const SizedBox(height: 20),
-            _buildDetailRow(Icons.alt_route_rounded, localization.getString('route_label'), localization.getString(route.tramo.toLowerCase())),
+            _buildDetailSection(localization, route, model),
             const Spacer(),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: isActive ? Colors.green.withOpacity(0.05) : Colors.orange.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.grey[200]!),
+                border: Border.all(color: isActive ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1)),
               ),
               child: Row(
                 children: [
@@ -1295,14 +1396,21 @@ class _HomeViewState extends State<HomeView> {
               height: 55,
               child: ElevatedButton(
                 onPressed: () {
+                  // Capture dependencies before popping or waiting
+                  final homeVM = context.read<HomeViewModel>();
+                  final schedVM = context.read<SchedulesViewModel>();
+                  
                   model.selectRoute(route, onRouteLoaded: () {
-                    // Move camera to route after data loads
-                    if (model.stops.isNotEmpty) {
-                      final homeViewModel = context.read<HomeViewModel>();
-                      final points = model.stops
+                    print("🎯 onRouteLoaded callback EXECUTED");
+                    // Use captured VM instead of context.read inside async callback
+                    if (schedVM.stops.isNotEmpty) {
+                      print("🗺️ Centering map on ${schedVM.stops.length} stops");
+                      final points = schedVM.stops
                           .map((s) => LatLng(s.latitud, s.longitud))
                           .toList();
-                      homeViewModel.moveCameraToRoute(points);
+                      homeVM.moveCameraToRoute(points);
+                    } else {
+                      print("⚠️  No stops available for centering");
                     }
                   });
                   Navigator.pop(context); // Close details
@@ -1380,28 +1488,49 @@ class _HomeViewState extends State<HomeView> {
                       ),
                       const SizedBox(width: 15),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              model.selectedRoute!.nombre,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF333333)),
-                            ),
-                            Text(
-                              isRouteActive ? localization.getString('active_tracking') : localization.getString('offline_system'),
-                              style: TextStyle(
-                                color: isRouteActive ? Colors.green[700] : Colors.orange[800], 
-                                fontSize: 10, 
-                                fontWeight: FontWeight.w900, 
-                                letterSpacing: 0.5
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                model.selectedRoute!.nombre,
+                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: Color(0xFF333333)), // Even bigger as requested
+                                maxLines: 2,
+                                overflow: TextOverflow.visible,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: (model.isRouteFinished ? Colors.red[50]! : (isRouteActive ? Colors.green[50]! : Colors.orange[50]!)),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: (model.isRouteFinished ? Colors.red[200]! : (isRouteActive ? Colors.green[200]! : Colors.orange[200]!))),
+                                ),
+                                child: Text(
+                                  model.getTrackingBannerText(localization),
+                                  style: TextStyle(
+                                    color: model.isRouteFinished ? Colors.red[800] : (isRouteActive ? Colors.green[800] : Colors.orange[900]), 
+                                    fontSize: 14, // Larger font
+                                    fontWeight: FontWeight.w900, 
+                                    letterSpacing: 0.1,
+                                    height: 1.3
+                                  ),
+                                  maxLines: 3, 
+                                  overflow: TextOverflow.visible,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                        icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 28),
                         onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       )
                     ],
                   ),
@@ -1444,7 +1573,7 @@ class _HomeViewState extends State<HomeView> {
                         children: [
                           Expanded(
                             child: Text(
-                              "${localization.getString('full_route')} (${stops.length} ${localization.getString('schedules').toUpperCase()})",
+                              "${localization.getString('full_route')} (${stops.length} ${localization.getString('stops_label').toUpperCase()})",
                               style: TextStyle(color: Colors.grey[600], fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1493,15 +1622,17 @@ class _HomeViewState extends State<HomeView> {
                         children: [
                           _buildTrackingPoint(
                             title: stop.nombre_parada,
-                            subtitle: stop.horario,
-                            state: stop.estatus,
+                            subtitle: "", // Removed scheduled times as they might not be exact
+                            state: status, // Use live status key
                             isRouteActive: isRouteActive,
                             isMyStop: isSelectedMyStop,
                             localization: localization,
+                            imageUrl: stop.url_imagen,
+                            onTapImage: () => _showStopImage(context, stop.nombre_parada, stop.url_imagen!),
                           ),
                           if (index < stops.length - 1)
                             _buildTrackingLine(
-                              isActive: isRouteActive && (status == 'Ya Realizada' || status == 'Unidad en el punto'),
+                              isActive: isRouteActive && (status == 'status_completed' || status == 'status_at_stop'),
                             ),
                         ],
                       );
@@ -1516,13 +1647,15 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildTrackingPoint({
+    Widget _buildTrackingPoint({
     required String title,
     required String subtitle,
     required String state,
     required LanguageService localization,
     bool isRouteActive = true,
     bool isMyStop = false,
+    String? imageUrl,
+    VoidCallback? onTapImage,
   }) {
     Color pointColor = Colors.grey[300]!;
     Widget icon = Container(
@@ -1536,17 +1669,17 @@ class _HomeViewState extends State<HomeView> {
     );
 
     if (isRouteActive) {
-      if (state == 'Ya Realizada') {
+      if (state == 'status_completed') {
         pointColor = const Color(0xFF064DC3);
         icon = const Icon(Icons.check_circle_rounded, color: Color(0xFF064DC3), size: 22);
-      } else if (state == 'Unidad en el punto') {
+      } else if (state == 'status_at_stop') {
         pointColor = Colors.green;
         icon = Container(
           padding: const EdgeInsets.all(4),
           decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
           child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 14),
         );
-      } else if (state == 'En Camino') {
+      } else if (state == 'status_in_transit') {
         pointColor = Colors.blue;
         icon = Container(
           width: 20,
@@ -1562,11 +1695,9 @@ class _HomeViewState extends State<HomeView> {
         );
       }
     } else {
-       // Warm up the offline state
        pointColor = const Color(0xFF064DC3).withOpacity(0.4);
     }
 
-    // Override icon if it IS My Stop
     if (isMyStop) {
       icon = Container(
         padding: const EdgeInsets.all(4),
@@ -1576,86 +1707,172 @@ class _HomeViewState extends State<HomeView> {
         ),
         child: const Icon(Icons.stars_rounded, color: Colors.orange, size: 28),
       );
-      state = localization.getString('my_stop_label');
+      state = 'my_stop_label';
     }
 
     final String translatedStatus = localization.getString(state);
+    final Color statusColor = isMyStop ? Colors.orange[800]! : (isRouteActive ? (state == 'status_completed' ? const Color(0xFF064DC3) : (state == 'status_at_stop' ? Colors.green[700]! : (state == 'status_in_transit' ? Colors.blue[700]! : Colors.grey[500]!))) : Colors.grey[500]!);
 
-    return Row(
-      children: [
-        SizedBox(width: 32, child: Center(child: icon)),
-        const SizedBox(width: 18),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                translatedStatus.toUpperCase(),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 15, 
-                  color: !isRouteActive ? const Color(0xFF064DC3).withOpacity(0.5) : (state == 'Ya Realizada' ? Colors.black54 : Colors.black87)
-                ),
-              ),
-              if (isRouteActive)
-                Text(
-                  localization.getString('view_details'),
-                  style: TextStyle(color: pointColor.withOpacity(0.8), fontSize: 10),
-                ),
-              Text(
-                subtitle.toUpperCase(),
-                style: TextStyle(
-                  color: isMyStop ? Colors.orange : pointColor,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTrackingLine({required bool isActive, bool isDashed = false}) {
-    return Container(
-      margin: const EdgeInsets.only(left: 14),
-      height: 40,
-      width: 2,
-      child: Stack(
-        alignment: Alignment.center,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8), // Increased vertical padding for "less crowded" feel
+      child: Row(
         children: [
-          Column(
-            children: List.generate(
-              isDashed ? 4 : 1,
-              (index) => Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 2),
-                  color: isActive ? const Color(0xFF064DC3) : Colors.grey[300],
+          SizedBox(width: 38, child: Center(child: icon)), // Slightly wider icon area
+          const SizedBox(width: 22),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: isMyStop || state == 'Unidad en el punto' ? FontWeight.bold : FontWeight.w600,
+                          fontSize: 16, // Slightly larger font
+                          color: isMyStop ? Colors.orange[900] : const Color(0xFF333333),
+                        ),
+                      ),
+                    ),
+                    if (imageUrl != null && imageUrl.isNotEmpty)
+                      IconButton(
+                        onPressed: onTapImage,
+                        icon: const Icon(Icons.image_rounded, color: Color(0xFF064DC3), size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: "Ver foto de la parada",
+                      ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 4), // More space between title and subtitle
+                Row(
+                  children: [
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        translatedStatus.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10, 
+                          color: statusColor, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.6
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          if (isActive)
-            const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF064DC3), size: 14),
+          if (isRouteActive)
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
         ],
       ),
     );
   }
 
-  Set<Marker> _buildMapMarkers(SchedulesViewModel model) {
+  void _showStopImage(BuildContext context, String stopName, String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(stopName, style: const TextStyle(color: Colors.white, fontSize: 16)),
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 1.0,
+            maxScale: 4.0,
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(child: CircularProgressIndicator(color: Colors.white));
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Text("Error al cargar imagen", style: TextStyle(color: Colors.white)),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailSection(LanguageService localization, RouteData route, SchedulesViewModel model) {
+    return Column(
+      children: [
+        _buildDetailRow(Icons.calendar_today_rounded, localization.getString('days_label'), localization.getString(model.getActiveDaysForRoute(route))),
+        const SizedBox(height: 22),
+        _buildDetailRow(Icons.access_time_filled_rounded, localization.getString('schedule_label'), localization.getString(route.tipo_ruta.toLowerCase())),
+        const SizedBox(height: 22),
+        _buildDetailRow(Icons.alt_route_rounded, localization.getString('route_label'), localization.getString(route.tramo.toLowerCase())),
+      ],
+    );
+  }
+
+  Widget _buildTrackingLine({bool isActive = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 17),
+      child: Container(
+        width: 2,
+        height: 25,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF064DC3).withOpacity(0.5) : Colors.grey[200],
+          borderRadius: BorderRadius.circular(1),
+        ),
+      ),
+    );
+  }
+
+
+  Set<Marker> _buildMapMarkers(SchedulesViewModel model, LanguageService localization, RouteData? selectedRoute) {
     Set<Marker> markers = {};
     
     // 1. Unit Marker
-    if (model.unit != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('unit'),
-        position: LatLng(double.tryParse(model.unit!.lat) ?? 0, double.tryParse(model.unit!.lon) ?? 0),
-        icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
-        anchor: const Offset(0.5, 0.5),
-        infoWindow: InfoWindow(title: "Unidad: ${model.unit!.economico}"),
-      ));
+    final unit = model.unit;
+    // Fix null safety: only check activity if a route is selected
+    final isActive = selectedRoute != null && model.isRouteActiveNow(selectedRoute); 
+
+    if (unit != null && isActive) {
+      final lat = double.tryParse(unit.lat) ?? 0.0;
+      final lon = double.tryParse(unit.lon) ?? 0.0;
+      
+      if (lat != 0.0 && lon != 0.0) {
+        markers.add(
+          Marker(
+            markerId: const MarkerId('unit_marker'),
+            position: LatLng(lat, lon),
+            icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            rotation: 0, // Could add heading if available
+            anchor: const Offset(0.5, 0.5),
+            infoWindow: InfoWindow(
+              title: "${localization.getString('assigned_unit')}: ${unit.economico}",
+              snippet: _getUnitSnippet(model, localization),
+            ),
+          ),
+        );
+      }
     }
 
     // 2. Stop Markers
@@ -1674,7 +1891,7 @@ class _HomeViewState extends State<HomeView> {
       
       if (model.showFilteredStops && model.unit != null) {
         if (stop.numero_parada == model.getPreviousStop()?.numero_parada) {
-          hue = BitmapDescriptor.hueMagenta; // Using Magenta for "Black" since default hues are limited
+          hue = BitmapDescriptor.hueViolet; // Closest to Black for default hues
         } else if (stop.numero_parada == model.getCurrentStop()?.numero_parada) {
           hue = BitmapDescriptor.hueGreen;
         } else if (stop.numero_parada == model.getNextStop()?.numero_parada) {
@@ -1683,16 +1900,29 @@ class _HomeViewState extends State<HomeView> {
       }
 
       if (isMyStop) {
-        hue = BitmapDescriptor.hueBlue; // User requested Blue for their stop
+        hue = BitmapDescriptor.hueRed; // Red as requested for "where I am / my stop"
       }
 
       markers.add(Marker(
         markerId: MarkerId('stop_${stop.claveruta}_${stop.numero_parada}'),
         position: LatLng(stop.latitud, stop.longitud),
         icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+        consumeTapEvents: true,
+        onTap: () {
+          if (stop.url_imagen != null && stop.url_imagen!.isNotEmpty) {
+            _showStopImage(context, stop.nombre_parada, stop.url_imagen!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Sin imagen de referencia para: ${stop.nombre_parada}"),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        },
         infoWindow: InfoWindow(
           title: stop.nombre_parada,
-          snippet: isMyStop ? "MI PARADA" : "Parada ${stop.numero_parada}",
+          snippet: isMyStop ? localization.getString('my_stop_label') : "${localization.getString('stops_label')} ${stop.numero_parada}",
         ),
       ));
     }
@@ -1734,6 +1964,13 @@ class _HomeViewState extends State<HomeView> {
         endCap: Cap.roundCap,
       )
     };
+  }
+
+  String _getUnitSnippet(SchedulesViewModel model, LanguageService localization) {
+    if (model.isRouteFinished) return localization.getString('status_route_finished');
+    final current = model.getCurrentStop();
+    if (current != null) return "${localization.getString('current_stop_label')}: ${current.nombre_parada}";
+    return localization.getString('live_tracking');
   }
 
   void _showMyStopPicker(BuildContext context, SchedulesViewModel model, LanguageService localization) {
@@ -2553,6 +2790,20 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                           color: Colors.black87,
                         ),
                       ),
+                      if (widget.routes.isNotEmpty && widget.routes.first.dia_ruta != null && widget.routes.first.dia_ruta!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                               Text(
+                                 context.read<LanguageService>().getString(widget.model.getActiveDaysForRoute(widget.routes.first)),
+                                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                               ),
+                            ],
+                          ),
+                        ),
                       Text(
                         "${widget.routes.length} ${context.read<LanguageService>().getString('available_schedules')}",
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
@@ -2622,24 +2873,20 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                             style: TextStyle(fontSize: 11, color: Colors.grey[500])
                           ),
                           trailing: const Icon(Icons.info_outline_rounded, size: 20, color: Colors.grey),
-                          onTap: () {
-                             // We don't have access to _showRouteDetailsModal directly here since it's in HomeViewState
-                             // but we can pass it via callback or use context to find it if it was a separate widget logic.
-                             // For now, I'll just trigger the selection directly or show details if possible.
-                             // Actually, _showRouteDetailsModal is inside HomeViewState. 
-                             // I'll make selective use of the model.
-                             widget.model.selectRoute(route, onRouteLoaded: () {
-                               // Move camera to route after data loads
-                               if (widget.model.stops.isNotEmpty) {
-                                 final homeViewModel = context.read<HomeViewModel>();
-                                 final points = widget.model.stops
-                                     .map((s) => LatLng(s.latitud, s.longitud))
-                                     .toList();
-                                 homeViewModel.moveCameraToRoute(points);
-                               }
-                             });
-                             Navigator.pop(context);
-                          },
+                           onTap: () {
+                              final homeVM = context.read<HomeViewModel>();
+                              final schedVM = context.read<SchedulesViewModel>();
+
+                              widget.model.selectRoute(route, onRouteLoaded: () {
+                                if (schedVM.stops.isNotEmpty) {
+                                  final points = schedVM.stops
+                                      .map((s) => LatLng(s.latitud, s.longitud))
+                                      .toList();
+                                  homeVM.moveCameraToRoute(points);
+                                }
+                              });
+                              Navigator.pop(context);
+                           },
                         ),
                       );
                     }),
