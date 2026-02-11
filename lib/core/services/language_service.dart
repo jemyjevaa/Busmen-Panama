@@ -126,6 +126,9 @@ class LanguageService extends ChangeNotifier {
       'status_at_stop': 'Unidad en el punto',
       'status_completed': 'Ya Realizada',
       'status_in_transit': 'En Camino',
+      'status_route_finished': 'Ruta Finalizada',
+      'current_stop_label': 'Parada actual',
+      'next_stop_label': 'Siguiente parada',
       'available_schedules': 'horarios disponibles',
       'no_routes_segment': 'No hay rutas en este tramo',
       'schedule_not_defined': 'Horario no definido',
@@ -170,6 +173,8 @@ class LanguageService extends ChangeNotifier {
       'LUN-DOM': 'Todos los días',
       'entry': 'Entrada',
       'exit': 'Salida',
+      'switch_language': 'Cambiar Idioma',
+      'stops_label': 'Paradas',
     },
     'EN': {
       // Login
@@ -288,6 +293,9 @@ class LanguageService extends ChangeNotifier {
       'status_at_stop': 'At Stop',
       'status_completed': 'Completed',
       'status_in_transit': 'In Transit',
+      'status_route_finished': 'Route Finished',
+      'current_stop_label': 'Current Stop',
+      'next_stop_label': 'Next Stop',
       'available_schedules': 'available schedules',
       'no_routes_segment': 'No routes in this segment',
       'schedule_not_defined': 'Schedule not defined',
@@ -332,6 +340,8 @@ class LanguageService extends ChangeNotifier {
       'LUN-DOM': 'Every day',
       'entry': 'Entry',
       'exit': 'Exit',
+      'switch_language': 'Change Language',
+      'stops_label': 'Stops',
     },
   };
 

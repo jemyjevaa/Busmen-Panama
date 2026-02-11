@@ -7,6 +7,7 @@ import 'package:busmen_panama/core/services/request_service.dart';
 import 'package:busmen_panama/core/services/url_service.dart';
 import 'package:busmen_panama/core/services/google_directions_service.dart';
 import 'package:busmen_panama/core/services/socket_service.dart';
+import 'package:busmen_panama/core/services/language_service.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -36,8 +37,24 @@ class SchedulesViewModel extends ChangeNotifier {
   String _filterOption = 'filter_all';
   String get filterOption => _filterOption;
 
+  String _searchQuery = '';
+  String get searchQuery => _searchQuery;
+
   void setFilterOption(String option) {
-    _filterOption = option;
+    // Normalize option to handle different formats (e.g., 'FRECUENTES' -> 'filter_frequent')
+    final normalized = option.toLowerCase();
+    if (normalized.contains('frequent') || normalized.contains('frecuentes')) {
+      _filterOption = 'filter_frequent';
+    } else if (normalized.contains('time') || normalized.contains('tiempo')) {
+      _filterOption = 'filter_on_time';
+    } else {
+      _filterOption = 'filter_all';
+    }
+    notifyListeners();
+  }
+
+  void setSearchQuery(String query) {
+    _searchQuery = query.toLowerCase().trim();
     notifyListeners();
   }
 
@@ -99,51 +116,102 @@ class SchedulesViewModel extends ChangeNotifier {
   String getStopLiveStatus(StopData stop) {
     if (_unit == null || _stops.isEmpty) return 'status_pending';
     
+    // 1. Check if whole route is finished
+    if (isRouteFinished) return 'status_completed';
+
     final unitLat = double.tryParse(_unit!.lat) ?? 0.0;
     final unitLon = double.tryParse(_unit!.lon) ?? 0.0;
     
-    // 1. Proximity check for "Unidad en el punto" (Threshold 50 meters)
+    final stopIndex = _stops.indexOf(stop);
+    
+    // Proximity check for "Unidad en el punto" (Threshold 70 meters for better catch)
     final distance = Geolocator.distanceBetween(
       unitLat, unitLon, 
       stop.latitud, stop.longitud
     );
     
-    if (distance < 50) return 'status_at_stop';
+    if (distance < 70) return 'status_at_stop';
 
-    // 2. Index based logic
-    final stopIndex = _stops.indexOf(stop);
-    
-    // Update internal current tracker if not set or found a better match
+    // Update internal current tracker
     _updateTrackingIndex(unitLat, unitLon);
 
     if (stopIndex < _currentUnitStopIndex) return 'status_completed';
+    if (stopIndex == _currentUnitStopIndex) {
+      // If we are far from the "current" stop anchor but it's our last known anchor, 
+      // it means we've already departed/passed it.
+      return 'status_completed'; 
+    }
     if (stopIndex == _currentUnitStopIndex + 1) return 'status_in_transit';
-    if (stopIndex > _currentUnitStopIndex) return 'status_pending';
     
     return 'status_pending';
   }
 
-  void _updateTrackingIndex(double unitLat, double unitLon) {
-    // Find the furthest stop the unit has already passed
-    // For simplicity, we find the stop with minimum distance or the the last one where distance was small.
-    // In a real scenario, we'd check if index i-1 distance < threshold and current distance is increasing.
-    
-    double minDistance = double.infinity;
-    int bestIndex = -1;
+  bool get isRouteFinished {
+    if (_unit == null || _stops.isEmpty || _currentUnitStopIndex < 0) return false;
+    // Route is finished if we reached the last stop
+    return _currentUnitStopIndex >= _stops.length - 1;
+  }
 
-    for (int i = 0; i < _stops.length; i++) {
+  String getTrackingBannerText(LanguageService localization) {
+    if (isRouteFinished) return localization.getString('status_route_finished');
+    
+    final current = getCurrentStop();
+    final next = getNextStop();
+    
+    if (current != null) {
+      final unitLat = double.tryParse(_unit!.lat) ?? 0.0;
+      final unitLon = double.tryParse(_unit!.lon) ?? 0.0;
+      final distance = Geolocator.distanceBetween(unitLat, unitLon, current.latitud, current.longitud);
+      
+      if (distance < 70) {
+        return "${localization.getString('current_stop_label')}: ${current.nombre_parada}";
+      }
+    }
+    
+    if (next != null) {
+      return "${localization.getString('next_stop_label')}: ${next.nombre_parada}";
+    }
+    
+    return localization.getString('live_tracking');
+  }
+
+  void _updateTrackingIndex(double unitLat, double unitLon) {
+    if (_stops.isEmpty) return;
+
+    // Initial Snap: If we haven't started tracking, find the absolute closest stop
+    // to correctly mark previous stops as completed even if we join mid-route.
+    if (_currentUnitStopIndex == -1) {
+      int closestIndex = 0;
+      double minDistance = double.infinity;
+
+      for (int i = 0; i < _stops.length; i++) {
+        final d = Geolocator.distanceBetween(unitLat, unitLon, _stops[i].latitud, _stops[i].longitud);
+        if (d < minDistance) {
+          minDistance = d;
+          closestIndex = i;
+        }
+      }
+
+      _currentUnitStopIndex = closestIndex;
+      print("DEBUG - Initial tracking snap to stop: ${_stops[closestIndex].nombre_parada} (Index: $closestIndex)");
+      return;
+    }
+
+    // Normal Forward Tracking:
+    int bestIndex = -1;
+    // Look forward from current anchor to find the next stop we are hitting/near
+    for (int i = _currentUnitStopIndex; i < _stops.length; i++) {
        final d = Geolocator.distanceBetween(unitLat, unitLon, _stops[i].latitud, _stops[i].longitud);
-       if (d < 100) { // If it's within 100m of ANY stop, that's our anchor
+       // We only consider it a new "anchor" if it's within 150m (generous for GPS drift)
+       if (d < 150) {
           bestIndex = i;
-       }
-       if (d < minDistance) {
-         minDistance = d;
+          break;
        }
     }
 
-    // Only update if we found a clear anchor or if the unit is moving forward
-    if (bestIndex != -1 && bestIndex >= _currentUnitStopIndex) {
+    if (bestIndex != -1 && bestIndex > _currentUnitStopIndex) {
       _currentUnitStopIndex = bestIndex;
+      print("DEBUG - Tracking index advanced to: $bestIndex (${_stops[bestIndex].nombre_parada})");
     }
   }
 
@@ -153,7 +221,14 @@ class SchedulesViewModel extends ChangeNotifier {
   // Group routes by name
   Map<String, List<RouteData>> get groupedRoutes {
     Map<String, List<RouteData>> groups = {};
-    for (var route in _routes) {
+    
+    // Apply search filter to grouped routes
+    final visibleRoutes = _searchQuery.isEmpty 
+        ? _routes 
+        : _routes.where((r) => r.nombre.toLowerCase().contains(_searchQuery) || 
+                              r.claveruta.toLowerCase().contains(_searchQuery)).toList();
+
+    for (var route in visibleRoutes) {
       if (!groups.containsKey(route.nombre)) {
         groups[route.nombre] = [];
       }
@@ -174,15 +249,26 @@ class SchedulesViewModel extends ChangeNotifier {
   }
 
   List<RouteData> get filteredRoutes {
+    List<RouteData> baseRoutes;
     switch (_filterOption) {
       case 'filter_frequent':
-        return recentRoutes;
+        baseRoutes = recentRoutes;
+        break;
       case 'filter_on_time':
-        return _routes.where(_isRouteInTime).toList();
+        baseRoutes = _routes.where(_isRouteInTime).toList();
+        break;
       case 'filter_all':
       default:
-        return _routes;
+        baseRoutes = _routes;
+        break;
     }
+
+    if (_searchQuery.isEmpty) return baseRoutes;
+
+    return baseRoutes.where((r) => 
+      r.nombre.toLowerCase().contains(_searchQuery) || 
+      r.claveruta.toLowerCase().contains(_searchQuery)
+    ).toList();
   }
 
   bool _isRouteInTime(RouteData route) {
@@ -198,20 +284,20 @@ class SchedulesViewModel extends ChangeNotifier {
       // Prefer dia_ruta field for day matching
       final daySource = diaRuta.isNotEmpty ? diaRuta : turno;
       
-      // Expanded day keywords
-      if (daySource.contains('L-V') || daySource.contains('LUN-VIE') || daySource.contains('LUNES A VIERNES')) {
-        dayMatch = (weekday >= 1 && weekday <= 5);
-      } else if (daySource.contains('SAB') || daySource.contains('SÁB') || daySource.contains('SABADO') || daySource.contains('SÁBADO')) {
-        dayMatch = (weekday == 6);
-      } else if (daySource.contains('DOM') || daySource.contains('DOMINGO')) {
-        dayMatch = (weekday == 7);
-      } else if (daySource.isEmpty || daySource.contains('DIARIO') || daySource.contains('TODOS') || daySource.contains('TODOS LOS DIAS')) {
-        dayMatch = true; 
-      } else {
-        // If we can't determine the day, log it and default to false to avoid showing wrong routes
-        print("DEBUG - Unknown day format for route ${route.claveruta}: dia_ruta='$diaRuta', tipo_ruta='$turno'");
-        dayMatch = false;
-      }
+      // Expanded day keywords - IMPORTANT: Priority matters to avoid partial matches
+    if (daySource.contains('DIARIO') || daySource.contains('TODOS') || daySource.contains('LUN-DOM') || daySource.isEmpty) {
+      dayMatch = true; 
+    } else if (daySource.contains('L-V') || daySource.contains('LUN-VIE') || daySource.contains('LUNES A VIERNES')) {
+      dayMatch = (weekday >= 1 && weekday <= 5);
+    } else if (daySource.contains('SAB') || daySource.contains('SÁB') || daySource.contains('SABADO') || daySource.contains('SÁBADO')) {
+      dayMatch = (weekday == 6);
+    } else if (daySource.contains('DOM') || daySource.contains('DOMINGO')) {
+      dayMatch = (weekday == 7);
+    } else {
+      // If we can't determine the day, log it and default to false to avoid showing wrong routes
+      print("DEBUG - Unknown day format for route ${route.claveruta}: dia_ruta='$diaRuta', tipo_ruta='$turno'");
+      dayMatch = false;
+    }
       
       if (!dayMatch) {
         print("DEBUG - Route ${route.claveruta} filtered out: today=$weekday, dia_ruta='$diaRuta'");
@@ -403,8 +489,15 @@ class SchedulesViewModel extends ChangeNotifier {
       ];
       
       await Future.wait(futures);
-      
-      print("DEBUG - After Future.wait: stops=${_stops.length}, unit=${_unit != null}");
+    
+    // Initial tracking update
+    if (_unit != null && _stops.isNotEmpty) {
+      final unitLat = double.tryParse(_unit!.lat) ?? 0.0;
+      final unitLon = double.tryParse(_unit!.lon) ?? 0.0;
+      _updateTrackingIndex(unitLat, unitLon);
+    }
+    
+    print("DEBUG - After Future.wait: stops=${_stops.length}, unit=${_unit != null}");
       
       // Always enable road-following and real-time tracking for all companies
       // BUT make it non-blocking if it fails
@@ -488,19 +581,20 @@ class SchedulesViewModel extends ChangeNotifier {
     _socketService.disconnect();
   }
 
-  void _updateUnitPosition(String lat, String lon) {
-    if (_unit != null) {
-      print("🚌 ${_unit!.economico}: $lat, $lon");
-      _unit = UnitData(
-        economico: _unit!.economico,
-        lat: lat,
-        lon: lon,
-        claveruta: _unit!.claveruta,
-        idplataformagps: _unit!.idplataformagps,
-      );
-      notifyListeners();
-    }
+  void _updateUnitPosition(String lat, String lon, {String? economico}) {
+  if (_unit != null || economico != null) {
+    final String finalEconomico = economico ?? _unit?.economico ?? '---';
+    print("🚌 $finalEconomico: $lat, $lon");
+    _unit = UnitData(
+      economico: finalEconomico,
+      lat: lat,
+      lon: lon,
+      claveruta: _selectedRoute?.claveruta ?? _unit?.claveruta ?? '',
+      idplataformagps: _unit?.idplataformagps ?? '',
+    );
+    notifyListeners();
   }
+}
 
   Future<void> fetchLastPosition(String claveruta) async {
     try {
@@ -528,9 +622,10 @@ class SchedulesViewModel extends ChangeNotifier {
           final lon = lastPos['longitud'] ?? lastPos['longitude'] ?? lastPos['lon'];
           
           if (lat != null && lon != null) {
-            _updateUnitPosition(lat.toString(), lon.toString());
-            print("DEBUG - Last position updated: $lat, $lon");
-          } else {
+          final economico = lastPos['economico']?.toString() ?? lastPos['unit']?.toString();
+          _updateUnitPosition(lat.toString(), lon.toString(), economico: economico);
+          print("DEBUG - Last position updated: $lat, $lon (Unit: $economico)");
+        } else {
             print("WARNING - Position data has null coordinates. Record: $lastPos");
             _updateUnitPosition('null', 'null');
           }
@@ -566,11 +661,19 @@ class SchedulesViewModel extends ChangeNotifier {
       );
 
       if (response != null && (response.respuesta == 'existe' || response.respuesta == 'correcto')) {
-        _stops = response.datos;
-        // Sort stops by numero_parada to ensure tracking logic works
-        _stops.sort((a, b) => a.numero_parada.compareTo(b.numero_parada));
-        print("DEBUG - fetchStops SUCCESS: Loaded ${_stops.length} stops");
-      } else {
+      // Filter unique stops by numero_parada to avoid duplication if API returns same stops multiple times
+      final Map<int, StopData> uniqueStopsMap = {};
+      for (var stop in response.datos) {
+        if (!uniqueStopsMap.containsKey(stop.numero_parada)) {
+          uniqueStopsMap[stop.numero_parada] = stop;
+        }
+      }
+      
+      _stops = uniqueStopsMap.values.toList();
+      // Sort stops by numero_parada to ensure tracking logic works
+      _stops.sort((a, b) => a.numero_parada.compareTo(b.numero_parada));
+      print("DEBUG - fetchStops SUCCESS: Loaded ${_stops.length} stops (filtered from ${response.datos.length})");
+    } else {
         _stops = [];
         print("DEBUG - fetchStops FAILED: Response = ${response?.respuesta}");
       }
@@ -637,10 +740,10 @@ class SchedulesViewModel extends ChangeNotifier {
 
   String getActiveDays(String turno) {
     final t = turno.toUpperCase();
+    if (t.contains('DIARIO') || t.contains('TODOS') || t.contains('LUN-DOM') || t.isEmpty) return 'every_day';
     if (t.contains('L-V') || t.contains('LUN-VIE') || t.contains('LUNES A VIERNES')) return 'monday_friday';
     if (t.contains('SAB') || t.contains('SÁB') || t.contains('SABADO') || t.contains('SÁBADO')) return 'saturdays';
     if (t.contains('DOM') || t.contains('DOMINGO')) return 'sunday';
-    if (t.contains('DIARIO') || t.contains('TODOS') || t.isEmpty) return 'every_day';
     return 'specific_schedule';
   }
 

@@ -103,20 +103,31 @@ class SchedulesView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 15,
+                    runSpacing: 8,
                     children: [
-                      const Icon(Icons.access_time_rounded, color: Colors.white70, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        "${localization.getString('shift_label')}: ${localization.getString(viewModel.selectedRoute!.tipo_ruta.toLowerCase())}",
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.access_time_rounded, color: Colors.white70, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            "${localization.getString('shift_label')}: ${localization.getString(viewModel.selectedRoute!.tipo_ruta.toLowerCase())}",
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 15),
-                      const Icon(Icons.calendar_today_rounded, color: Colors.white70, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        "${localization.getString('days_label')}: ${localization.getString(viewModel.getActiveDays(viewModel.selectedRoute!.dia_ruta ?? viewModel.selectedRoute!.tipo_ruta))}",
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, color: Colors.white70, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            "${localization.getString('days_label')}: ${localization.getString(viewModel.getActiveDays(viewModel.selectedRoute!.dia_ruta ?? viewModel.selectedRoute!.tipo_ruta))}",
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -249,18 +260,32 @@ class SchedulesView extends StatelessWidget {
                                                   child: Column(
                                                     crossAxisAlignment: CrossAxisAlignment.start,
                                                     children: [
-                                                      Text(
-                                                        stop.nombre_parada,
-                                                        style: const TextStyle(
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 15,
-                                                          color: Color(0xFF064DC3),
-                                                        ),
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: Text(
+                                                              stop.nombre_parada,
+                                                              style: const TextStyle(
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: 15,
+                                                                color: Color(0xFF064DC3),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          if (stop.url_imagen != null && stop.url_imagen!.isNotEmpty)
+                                                            IconButton(
+                                                              onPressed: () => _showStopImage(context, stop.nombre_parada, stop.url_imagen!),
+                                                              icon: const Icon(Icons.image_rounded, color: Color(0xFF064DC3), size: 18),
+                                                              padding: EdgeInsets.zero,
+                                                              constraints: const BoxConstraints(),
+                                                              tooltip: "Ver foto de la parada",
+                                                            ),
+                                                        ],
                                                       ),
                                                       const SizedBox(height: 10),
                                                       Row(
                                                         children: [
-                                                          _buildTimeRow(Icons.access_time_rounded, stop.horario, localization.getString('schedule_label')),
+                                                          _buildTimeRow(Icons.access_time_rounded, stop.horario, localization.getString('stops_label')),
                                                           const Spacer(),
                                                           Container(
                                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -327,6 +352,43 @@ class SchedulesView extends StatelessWidget {
     );
   }
 
+  void _showStopImage(BuildContext context, String stopName, String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(stopName, style: const TextStyle(color: Colors.white, fontSize: 16)),
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            minScale: 1.0,
+            maxScale: 4.0,
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(child: CircularProgressIndicator(color: Colors.white));
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Text("Error al cargar imagen", style: TextStyle(color: Colors.white)),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SimpleRoutePicker extends StatelessWidget {

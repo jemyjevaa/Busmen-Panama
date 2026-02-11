@@ -203,12 +203,21 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
-  /// Move camera to show route with all stops
   Future<void> moveCameraToRoute(List<LatLng> points) async {
-    if (_mapController == null || points.isEmpty) return;
+    print("🎥 moveCameraToRoute: points=${points.length}, controller=${_mapController != null}");
+    if (_mapController == null || points.isEmpty) {
+      if (_mapController == null) print("❌ No map controller found for centering!");
+      return;
+    }
 
     try {
+      // Small initial delay to allow UI to settle
+      await Future.delayed(const Duration(milliseconds: 350));
+      
+      if (_mapController == null) return;
+
       if (points.length == 1) {
+        print("🗺️ Moving camera to single point: ${points.first}");
         await _mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(points.first, 15),
         );
@@ -231,10 +240,26 @@ class HomeViewModel extends ChangeNotifier {
           northeast: LatLng(maxLat, maxLng),
         );
 
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 80), // 80px padding
-        );
-        print("🗺️ Centered map on route");
+        print("🗺️ Animating camera to bounds: $bounds");
+        
+        // Use a loop to try multiple times if it fails (common if map isn't ready)
+        bool success = false;
+        int attempts = 0;
+        
+        while (!success && attempts < 3) {
+          try {
+            if (_mapController == null) break;
+            await _mapController!.animateCamera(
+              CameraUpdate.newLatLngBounds(bounds, 80), // 80px padding
+            );
+            success = true;
+            print("🗺️ Centered map successfully on attempt ${attempts + 1}");
+          } catch (e) {
+            attempts++;
+            print("🗺️ Camera move attempt $attempts failed, waiting... $e");
+            await Future.delayed(Duration(milliseconds: 400 * attempts));
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error moving camera: $e');
@@ -278,5 +303,16 @@ class HomeViewModel extends ChangeNotifier {
     _isDisposed = true;
     _mapController?.dispose();
     super.dispose();
+  }
+
+  Future<void> moveCameraToPosition(LatLng position, {double zoom = 15.0}) async {
+    if (_mapController == null) return;
+    try {
+      await _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(position, zoom),
+      );
+    } catch (e) {
+      debugPrint('Error moving camera to position: $e');
+    }
   }
 }
