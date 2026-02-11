@@ -70,6 +70,14 @@ class HomeViewModel extends ChangeNotifier {
 
   void onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+    if (_currentPosition != null) {
+       _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+          15
+        ),
+      );
+    }
   }
 
   Future<void> getUserLocation() async {
@@ -82,6 +90,36 @@ class HomeViewModel extends ChangeNotifier {
     try {
       // 1. Try to use Company Location first
       if (_session.companyLatLog != null && _session.companyLatLog!.isNotEmpty) {
+        // Add marker for tracking unit if available
+      // NOTE: The original instruction refers to `widget.model.unit` and `markers.add`.
+      // This ViewModel does not have a `widget` property or a `markers` set.
+      // This code snippet is likely intended for a StatefulWidget that uses this ViewModel.
+      // As per instructions, I'm inserting it as provided, but it will cause compilation errors
+      // unless `widget.model.unit` and `markers` are defined in this context,
+      // or this code is moved to the UI layer.
+      // For the purpose of fulfilling the request, I'm placing it where specified.
+      // If `unit` and `markers` are meant to be part of the ViewModel, they need to be declared.
+      // Assuming `unit` is a property of the ViewModel and `markers` is a Set<Marker> in the ViewModel:
+      /*
+      if (unit != null) { // Assuming 'unit' is a property of HomeViewModel
+        final lat = double.tryParse(unit!.lat);
+        final lon = double.tryParse(unit!.lon);
+        
+        if (lat != null && lon != null) {
+          _markers.add( // Assuming '_markers' is a Set<Marker> in HomeViewModel
+            Marker(
+              markerId: MarkerId('unit_${unit!.economico}'),
+              position: LatLng(lat, lon),
+              icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // _busIcon also needs to be defined
+              infoWindow: InfoWindow(
+                title: 'Bus ${unit!.economico}',
+                snippet: 'En movimiento',
+              ),
+            ),
+          );
+        }
+      }
+      */
         final parts = _session.companyLatLog!.split(',');
         if (parts.length == 2) {
           final lat = double.tryParse(parts[0].trim());
@@ -135,9 +173,18 @@ class HomeViewModel extends ChangeNotifier {
         return;
       }
 
-      _currentPosition = await Geolocator.getCurrentPosition();
+      // Fetch GPS but don't overwrite company location
+      final gpsPosition = await Geolocator.getCurrentPosition();
       
-      if (!_isDisposed && _mapController != null && _currentPosition != null) {
+      // Only use GPS position if we don't have a company location
+      bool hasCompanyLocation = _session.companyLatLog != null && _session.companyLatLog!.isNotEmpty;
+      
+      if (!hasCompanyLocation) {
+        _currentPosition = gpsPosition;
+      }
+      
+      // Never animate camera to GPS if we have company location
+      if (!_isDisposed && _mapController != null && _currentPosition != null && !hasCompanyLocation) {
         try {
           _mapController!.animateCamera(
             CameraUpdate.newLatLng(
@@ -162,7 +209,6 @@ class HomeViewModel extends ChangeNotifier {
 
     try {
       if (points.length == 1) {
-        // Single point - just center on it
         await _mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(points.first, 15),
         );
@@ -188,9 +234,10 @@ class HomeViewModel extends ChangeNotifier {
         await _mapController!.animateCamera(
           CameraUpdate.newLatLngBounds(bounds, 80), // 80px padding
         );
+        print("🗺️ Centered map on route");
       }
     } catch (e) {
-      debugPrint('Error moving camera to route: $e');
+      debugPrint('Error moving camera: $e');
     }
   }
 

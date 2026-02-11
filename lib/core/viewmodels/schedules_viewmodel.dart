@@ -416,24 +416,20 @@ class SchedulesViewModel extends ChangeNotifier {
         print("ERROR - Failed to fetch road points: $e");
       }
       
-      // WebSocket tracking is completely optional and TEMPORARILY DISABLED
-      // TODO: Fix WebSocket cookie header issue before re-enabling
-      /*
+      
       try {
         print("DEBUG - Starting socket tracking...");
-        await _startSocketTracking();
+        _startSocketTracking();
       } catch (e) {
         print("ERROR - Failed to start socket tracking (non-critical): $e");
       }
-      */
-      print("DEBUG - WebSocket tracking disabled temporarily");
       
       print("DEBUG - selectRoute completed. Notifying listeners...");
       notifyListeners();
       
       // Call the callback after everything is loaded
       if (onRouteLoaded != null) {
-        print("DEBUG - Calling onRouteLoaded callback");
+        print("📍 Centering map on route with ${_stops.length} stops");
         onRouteLoaded();
       }
     } else {
@@ -453,25 +449,36 @@ class SchedulesViewModel extends ChangeNotifier {
     
     // Set device IDs for filtering if available
     if (_unit != null && _unit!.idplataformagps != null) {
-      _socketService.setDeviceIds([_unit!.idplataformagps]);
+      print("🔗 Tracking unit ${_unit!.economico} (deviceId: ${_unit!.idplataformagps})");
+      _socketService.setDeviceIds([_unit!.idplataformagps!]);
+    } else {
+      print("⚠️  No device ID available for tracking");
     }
     
     await _socketService.connect();
     
     _socketSubscription = _socketService.positionStream?.listen((packet) {
       try {
-        // Handle both formats: 'lat'/'lon' and 'latitude'/'longitude'
-        final lat = packet['lat'] ?? packet['latitude'];
-        final lon = packet['lon'] ?? packet['longitude'];
+        final lat = packet['lat'] ?? packet['latitude'] ?? packet['latitud'];
+        final lon = packet['lon'] ?? packet['longitude'] ?? packet['longitud'];
+        final deviceId = packet['deviceId'];
+        
+        // CRITICAL: Only update if this packet is for OUR unit
+        if (_unit != null && _unit!.idplataformagps != null) {
+          final unitDeviceId = int.tryParse(_unit!.idplataformagps!);
+          final packetDeviceId = deviceId is int ? deviceId : int.tryParse(deviceId?.toString() ?? '');
+          
+          if (packetDeviceId != unitDeviceId) {
+            // This position is for a different bus, ignore it
+            return;
+          }
+        }
         
         if (lat != null && lon != null) {
-          _updateUnitPosition(
-            lat.toString(),
-            lon.toString()
-          );
+          _updateUnitPosition(lat.toString(), lon.toString());
         }
       } catch (e) {
-        print("Error parsing socket data: $e");
+        print("❌ Socket error: $e");
       }
     });
   }
@@ -483,11 +490,13 @@ class SchedulesViewModel extends ChangeNotifier {
 
   void _updateUnitPosition(String lat, String lon) {
     if (_unit != null) {
+      print("🚌 ${_unit!.economico}: $lat, $lon");
       _unit = UnitData(
         economico: _unit!.economico,
         lat: lat,
         lon: lon,
         claveruta: _unit!.claveruta,
+        idplataformagps: _unit!.idplataformagps,
       );
       notifyListeners();
     }
