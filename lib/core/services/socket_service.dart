@@ -24,14 +24,14 @@ class SocketService {
   /// Initialize session cookie for WebSocket authentication
   Future<bool> initSessionCookie() async {
     try {
-      print("DEBUG - Initializing GPS session cookie...");
+      // print("DEBUG - Initializing GPS session cookie...");
       final prefs = await SharedPreferences.getInstance();
       
       // Check if we already have a valid cookie
       final existingCookie = prefs.getString('gps_session_cookie');
       if (existingCookie != null && existingCookie.isNotEmpty) {
         _sessionCookie = existingCookie;
-        print("DEBUG - Using existing GPS session cookie");
+        // print("DEBUG - Using existing GPS session cookie");
         return true;
       }
 
@@ -47,15 +47,15 @@ class SocketService {
         if (setCookie != null) {
           _sessionCookie = setCookie.split(';')[0]; // Extract cookie value (JSESSIONID=...)
           await prefs.setString('gps_session_cookie', _sessionCookie!);
-          print("DEBUG - GPS session cookie initialized: ${_sessionCookie!.substring(0, 20)}...");
+          // print("DEBUG - GPS session cookie initialized: ${_sessionCookie!.substring(0, 20)}...");
           return true;
         }
       }
       
-      print("ERROR - Failed to get GPS session cookie: ${response.statusCode}");
+      // print("ERROR - Failed to get GPS session cookie: ${response.statusCode}");
       return false;
     } catch (e) {
-      print("ERROR - initSessionCookie: $e");
+      // print("ERROR - initSessionCookie: $e");
       return false;
     }
   }
@@ -68,13 +68,13 @@ class SocketService {
         .where((id) => id != null)
         .cast<int>()
         .toList();
-    print("DEBUG - Device IDs set: $_deviceIds");
+    // print("DEBUG - Device IDs set: $_deviceIds");
   }
 
   /// Connect to WebSocket with authentication
   Future<void> connect() async {
     if (_isConnected) {
-      print("DEBUG - Already connected to WebSocket");
+      // print("DEBUG - Already connected to WebSocket");
       return;
     }
 
@@ -82,14 +82,14 @@ class SocketService {
     if (_sessionCookie == null) {
       final success = await initSessionCookie();
       if (!success) {
-        print("ERROR - Cannot connect without session cookie");
+        // print("ERROR - Cannot connect without session cookie");
         return;
       }
     }
 
     try {
       final url = Uri.parse(_urlService.getUrlSocket());
-      print("DEBUG - Connecting to WebSocket: $url");
+      // print("DEBUG - Connecting to WebSocket: $url");
       
       _channel = WebSocketChannel.connect(
         url,
@@ -106,18 +106,18 @@ class SocketService {
       _channel!.stream.listen(
         (data) => _handleMessage(data),
         onError: (error) {
-          print("ERROR - WebSocket error: $error");
+          // print("ERROR - WebSocket error: $error");
           _handleDisconnect();
         },
         onDone: () {
-          print("DEBUG - WebSocket connection closed");
+          // print("DEBUG - WebSocket connection closed");
           _handleDisconnect();
         },
       );
 
-      print("DEBUG - WebSocket connected successfully");
+      // print("DEBUG - WebSocket connected successfully");
     } catch (e) {
-      print("ERROR - Failed to connect to WebSocket: $e");
+      // print("ERROR - Failed to connect to WebSocket: $e");
       _isConnected = false;
     }
   }

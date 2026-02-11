@@ -209,12 +209,12 @@ class SchedulesViewModel extends ChangeNotifier {
         dayMatch = true; 
       } else {
         // If we can't determine the day, log it and default to false to avoid showing wrong routes
-        print("DEBUG - Unknown day format for route ${route.claveruta}: dia_ruta='$diaRuta', tipo_ruta='$turno'");
+        // print("DEBUG - Unknown day format for route ${route.claveruta}: dia_ruta='$diaRuta', tipo_ruta='$turno'");
         dayMatch = false;
       }
       
       if (!dayMatch) {
-        print("DEBUG - Route ${route.claveruta} filtered out: today=$weekday, dia_ruta='$diaRuta'");
+        // print("DEBUG - Route ${route.claveruta} filtered out: today=$weekday, dia_ruta='$diaRuta'");
         return false;
       }
 
@@ -265,7 +265,7 @@ class SchedulesViewModel extends ChangeNotifier {
       final isInTimeWindow = now.isAfter(windowStart) && now.isBefore(windowEnd);
       
       if (!isInTimeWindow) {
-        print("DEBUG - Route ${route.claveruta} filtered out by time: now=${now.hour}:${now.minute}, window=${startTimeStr}-${endTimeStr}");
+        // print("DEBUG - Route ${route.claveruta} filtered out by time: now=${now.hour}:${now.minute}, window=${startTimeStr}-${endTimeStr}");
       }
       
       return isInTimeWindow;
@@ -282,19 +282,19 @@ class SchedulesViewModel extends ChangeNotifier {
   bool get isLoadingStops => _isLoadingStops;
 
   SchedulesViewModel() {
-    print("DEBUG - SchedulesViewModel constructor called");
+    // print("DEBUG - SchedulesViewModel constructor called");
     fetchRoutes();
   }
 
   Future<void> fetchRoutes() async {
-    print("DEBUG - fetchRoutes - userSide: ${_session.userSide}");
+    // print("DEBUG - fetchRoutes - userSide: ${_session.userSide}");
     _isLoadingRoutes = true;
     notifyListeners();
 
     try {
-      print("DEBUG - fetchRoutes - Starting request...");
-      print("DEBUG - fetchRoutes - URL: ${_urlService.getUrlInfoRoutes()}");
-      print("DEBUG - fetchRoutes - Params: tipo_ruta=${_session.userSide == 1 ? 'EXT' : '1'}, empresa=${_session.companyClave}");
+      // print("DEBUG - fetchRoutes - Starting request...");
+      // print("DEBUG - fetchRoutes - URL: ${_urlService.getUrlInfoRoutes()}");
+      // print("DEBUG - fetchRoutes - Params: tipo_ruta=${_session.userSide == 1 ? 'EXT' : '1'}, empresa=${_session.companyClave}");
       
       final response = await _requestService.handlingRequestParsed<ResponseInfoRoutes>(
         urlParam: _urlService.getUrlInfoRoutes(),
@@ -304,17 +304,17 @@ class SchedulesViewModel extends ChangeNotifier {
         },
         method: 'POST',
         fromJson: (json) {
-          print("DEBUG - fetchRoutes JSON: $json");
+          // print("DEBUG - fetchRoutes JSON: $json");
           return ResponseInfoRoutes.fromJson(json);
         },
       );
 
       if (response != null && (response.respuesta == 'existe' || response.respuesta == 'correcto')) {
         _routes = response.datos;
-        print("DEBUG - fetchRoutes success. Loaded ${_routes.length} routes.");
+        // print("DEBUG - fetchRoutes success. Loaded ${_routes.length} routes.");
       } else {
         _routes = [];
-        print("DEBUG - fetchRoutes failed or empty. Response: ${response?.respuesta}");
+        // print("DEBUG - fetchRoutes failed or empty. Response: ${response?.respuesta}");
       }
     } catch (e) {
       debugPrint('Error fetching routes: $e');
@@ -329,7 +329,7 @@ class SchedulesViewModel extends ChangeNotifier {
 
   Future<void> fetchFlyersByCategory(String routeClave, String tipo) async {
     try {
-      print("DEBUG - fetchFlyersByCategory: tipo=$tipo, route=$routeClave");
+      // print("DEBUG - fetchFlyersByCategory: tipo=$tipo, route=$routeClave");
       final response = await _requestService.handlingRequestParsed<ResponseFlyers>(
         urlParam: _urlService.getUrlAnnouncements(),
         params: {
@@ -340,13 +340,13 @@ class SchedulesViewModel extends ChangeNotifier {
         method: 'POST',
         asJson: true, // Crucial: User specified JSON encoding
         fromJson: (json) {
-          print("DEBUG - Flyers Response ($tipo): $json");
+          // print("DEBUG - Flyers Response ($tipo): $json");
           return ResponseFlyers.fromJson(json);
         },
       );
 
       if (response != null && response.respuesta == 'correcto') {
-        print("DEBUG - Found ${response.datos.length} flyers for tipo $tipo");
+        // print("DEBUG - Found ${response.datos.length} flyers for tipo $tipo");
         // Sort by date (most recent first)
         final sorted = response.datos.toList()
           ..sort((a, b) => b.fecha_alta.compareTo(a.fecha_alta));
@@ -393,7 +393,7 @@ class SchedulesViewModel extends ChangeNotifier {
       _currentUnitStopIndex = -1; // Reset tracking
       addToRecent(route);
       
-      print("DEBUG - selectRoute called for: ${route.claveruta}");
+      // print("DEBUG - selectRoute called for: ${route.claveruta}");
       
       final futures = [
         fetchStops(route.claveruta),
@@ -404,14 +404,14 @@ class SchedulesViewModel extends ChangeNotifier {
       
       await Future.wait(futures);
       
-      print("DEBUG - After Future.wait: stops=${_stops.length}, unit=${_unit != null}");
+      // print("DEBUG - After Future.wait: stops=${_stops.length}, unit=${_unit != null}");
       
       // Always enable road-following and real-time tracking for all companies
       // BUT make it non-blocking if it fails
       try {
-        print("DEBUG - Fetching road points...");
+        // print("DEBUG - Fetching road points...");
         await _fetchRoadPoints();
-        print("DEBUG - Road points fetched: ${_roadPoints.length}");
+        // print("DEBUG - Road points fetched: ${_roadPoints.length}");
       } catch (e) {
         print("ERROR - Failed to fetch road points: $e");
       }
@@ -426,14 +426,14 @@ class SchedulesViewModel extends ChangeNotifier {
         print("ERROR - Failed to start socket tracking (non-critical): $e");
       }
       */
-      print("DEBUG - WebSocket tracking disabled temporarily");
+      // print("DEBUG - WebSocket tracking disabled temporarily");
       
-      print("DEBUG - selectRoute completed. Notifying listeners...");
+      // print("DEBUG - selectRoute completed. Notifying listeners...");
       notifyListeners();
       
       // Call the callback after everything is loaded
       if (onRouteLoaded != null) {
-        print("DEBUG - Calling onRouteLoaded callback");
+        // print("DEBUG - Calling onRouteLoaded callback");
         onRouteLoaded();
       }
     } else {
@@ -495,7 +495,7 @@ class SchedulesViewModel extends ChangeNotifier {
 
   Future<void> fetchLastPosition(String claveruta) async {
     try {
-      print("DEBUG - fetchLastPosition for route: $claveruta");
+      // print("DEBUG - fetchLastPosition for route: $claveruta");
       final responseBody = await _requestService.handlingRequest(
         urlParam: _urlService.getUrlInfoPositions(),
         params: {
@@ -506,13 +506,13 @@ class SchedulesViewModel extends ChangeNotifier {
       );
 
       if (responseBody != null) {
-        print("DEBUG - Position API raw response: $responseBody");
+        // print("DEBUG - Position API raw response: $responseBody");
         final List<dynamic> data = json.decode(responseBody);
-        print("DEBUG - Position API parsed ${data.length} records");
+        // print("DEBUG - Position API parsed ${data.length} records");
         
         if (data.isNotEmpty) {
           final lastPos = data.first;
-          print("DEBUG - Position record fields: ${lastPos.keys.toList()}");
+          // print("DEBUG - Position record fields: ${lastPos.keys.toList()}");
           
           // Try different possible field names
           final lat = lastPos['latitud'] ?? lastPos['latitude'] ?? lastPos['lat'];
@@ -520,9 +520,9 @@ class SchedulesViewModel extends ChangeNotifier {
           
           if (lat != null && lon != null) {
             _updateUnitPosition(lat.toString(), lon.toString());
-            print("DEBUG - Last position updated: $lat, $lon");
+            // print("DEBUG - Last position updated: $lat, $lon");
           } else {
-            print("WARNING - Position data has null coordinates. Record: $lastPos");
+            // print("WARNING - Position data has null coordinates. Record: $lastPos");
             _updateUnitPosition('null', 'null');
           }
         } else {
@@ -537,12 +537,12 @@ class SchedulesViewModel extends ChangeNotifier {
   }
 
   Future<void> fetchStops(String claveruta) async {
-    print("DEBUG - fetchStops called for: $claveruta");
+    // print("DEBUG - fetchStops called for: $claveruta");
     _isLoadingStops = true;
     notifyListeners();
 
     try {
-      print("DEBUG - fetchStops - Making API request...");
+      // print("DEBUG - fetchStops - Making API request...");
       final response = await _requestService.handlingRequestParsed<ResponseInfoStops>(
         urlParam: _urlService.getUrlInfoStops(),
         params: {
@@ -551,7 +551,7 @@ class SchedulesViewModel extends ChangeNotifier {
         },
         method: 'POST',
         fromJson: (json) {
-          print("DEBUG - fetchStops JSON: $json");
+          // print("DEBUG - fetchStops JSON: $json");
           return ResponseInfoStops.fromJson(json);
         },
       );
@@ -560,10 +560,10 @@ class SchedulesViewModel extends ChangeNotifier {
         _stops = response.datos;
         // Sort stops by numero_parada to ensure tracking logic works
         _stops.sort((a, b) => a.numero_parada.compareTo(b.numero_parada));
-        print("DEBUG - fetchStops SUCCESS: Loaded ${_stops.length} stops");
+        // print("DEBUG - fetchStops SUCCESS: Loaded ${_stops.length} stops");
       } else {
         _stops = [];
-        print("DEBUG - fetchStops FAILED: Response = ${response?.respuesta}");
+        // print("DEBUG - fetchStops FAILED: Response = ${response?.respuesta}");
       }
     } catch (e) {
       debugPrint('ERROR - fetchStops exception: $e');
@@ -571,7 +571,7 @@ class SchedulesViewModel extends ChangeNotifier {
     } finally {
       _isLoadingStops = false;
       notifyListeners();
-      print("DEBUG - fetchStops completed. Total stops: ${_stops.length}");
+      // print("DEBUG - fetchStops completed. Total stops: ${_stops.length}");
       
       // Check for duplicate coordinates (database issue)
       _checkDuplicateCoordinates();
@@ -606,7 +606,7 @@ class SchedulesViewModel extends ChangeNotifier {
         },
         method: 'POST',
         fromJson: (json) {
-          print("DEBUG - fetchUnit JSON: $json");
+          // print("DEBUG - fetchUnit JSON: $json");
           return ResponseInfoUnit.fromJson(json);
         },
       );

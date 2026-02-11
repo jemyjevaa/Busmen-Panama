@@ -70,9 +70,9 @@ class _HomeViewState extends State<HomeView> {
                     initialCameraPosition: CameraPosition(
                       target: () {
                         // 1. Check currentPosition (might be company if ViewModel finished quickly)
-                        if (viewModel.currentPosition != null) {
+                        /*if (viewModel.currentPosition != null) {
                           return LatLng(viewModel.currentPosition!.latitude, viewModel.currentPosition!.longitude);
-                        }
+                        }*/
                         // 2. Check Company LatLog directly from Session for the very first frame
                         final companyLatLog = CacheUserSession().companyLatLog;
                         if (companyLatLog != null && companyLatLog.isNotEmpty) {

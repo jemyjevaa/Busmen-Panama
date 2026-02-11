@@ -115,12 +115,12 @@ class LoginViewModel extends ChangeNotifier {
           method: "POST",
           params: {'correo': userController.text},
           fromJson: (json) {
-            print("respDomine-json => $json");
+            // print("respDomine-json => $json");
             return ResponseValidateDomine.fromJson(json);
           },
       );
 
-      print("respDomine => ${respDomine}");
+      // print("respDomine => ${respDomine}");
 
       if( respDomine == null || respDomine.respuesta != "correcto" ){
         scaffoldMessengerKey.currentState?.showSnackBar(
@@ -141,12 +141,12 @@ class LoginViewModel extends ChangeNotifier {
           params: {"idempresa": respDomine.datos.first.id},
           method: 'POST',
           fromJson: (json){
-            print("respCompany-json => $json");
+            // print("respCompany-json => $json");
             return ResponseValidateCompany.fromJson(json);
           }
       );
 
-      print("respCompany => $respCompany");
+      // print("respCompany => $respCompany");
 
       if( respCompany == null || respCompany.respuesta != "existe" ){
         scaffoldMessengerKey.currentState?.showSnackBar(
@@ -171,11 +171,11 @@ class LoginViewModel extends ChangeNotifier {
           "empresa": respCompany.datos.first.clave
         },
         fromJson: (json) {
-          print("respUser-json => $json");
+          // print("respUser-json => $json");
           return ResponseValidateUser.fromJson(json);
         }
       );
-      print("respUser => ${respUser?.respuesta}");
+      // print("respUser => ${respUser?.respuesta}");
       
       if( respUser == null || respUser.respuesta != "existe" ){
         scaffoldMessengerKey.currentState?.showSnackBar(
@@ -196,10 +196,10 @@ class LoginViewModel extends ChangeNotifier {
       CacheUserSession().companyEmail = respCompany.datos.first.correos;
       CacheUserSession().companyPhone = respCompany.datos.first.telefonos;
       
-      print("DEBUG - COMPANY DATA: ${respCompany.datos.first.nombre}, Phone: '${respCompany.datos.first.telefonos}', Emails: '${respCompany.datos.first.correos}'");
-      print("DEBUG - FULL COMPANY API RESPONSE READY");
+      // print("DEBUG - COMPANY DATA: ${respCompany.datos.first.nombre}, Phone: '${respCompany.datos.first.telefonos}', Emails: '${respCompany.datos.first.correos}'");
+      // print("DEBUG - FULL COMPANY API RESPONSE READY");
       
-      print("DEBUG - COMPANY CLAVE FROM API: '${respCompany.datos.first.clave}'");
+      // print("DEBUG - COMPANY CLAVE FROM API: '${respCompany.datos.first.clave}'");
       CacheUserSession().colorOne = respCompany.datos.first.color1.isEmpty? CacheUserSession().colorOne:respCompany.datos.first.color1;
       CacheUserSession().colorTwo = respCompany.datos.first.color2.isEmpty? CacheUserSession().colorTwo:respCompany.datos.first.color2;
 
@@ -213,13 +213,13 @@ class LoginViewModel extends ChangeNotifier {
         CacheUserSession().isCopaair = false;
       }
       
-      print("DEBUG - SETTING USER SIDE TO: ${CacheUserSession().userSide}");
+      // print("DEBUG - SETTING USER SIDE TO: ${CacheUserSession().userSide}");
 
       CacheUserSession().userName = respUser.datos.first.nombre;
       CacheUserSession().userEmail = respUser.datos.first.email;
       CacheUserSession().loginUser = userController.text;
       CacheUserSession().userIdCli = respUser.datos.first.id_cli;
-      print("Sesión guardada - Usuario: ${CacheUserSession().userName}, Email: ${CacheUserSession().userEmail}");
+      // print("Sesión guardada - Usuario: ${CacheUserSession().userName}, Email: ${CacheUserSession().userEmail}");
       CacheUserSession().userRuta1 = respUser.datos.first.ruta1;
       CacheUserSession().userRuta2 = respUser.datos.first.ruta2;
       CacheUserSession().userRuta3 = respUser.datos.first.ruta3;
@@ -228,7 +228,7 @@ class LoginViewModel extends ChangeNotifier {
       CacheUserSession().isLogin = true;
 
       // Initialize GPS session cookie for WebSocket tracking (in background)
-      print("DEBUG - Initializing GPS session cookie after successful login...");
+      // print("DEBUG - Initializing GPS session cookie after successful login...");
       SocketService().initSessionCookie().then((success) {
         if (success) {
           print("DEBUG - GPS session cookie ready for tracking");
@@ -269,7 +269,7 @@ class LoginViewModel extends ChangeNotifier {
     }catch( e ){
       loadingLogIn = !loadingLogIn;
       notifyListeners();
-      print("Login error: $e");
+      //print("Login error: $e");
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -308,10 +308,10 @@ class LoginViewModel extends ChangeNotifier {
           fromJson: (json) => ResponseNewUser.fromJson(json)
       );
 
-      print("respNewUser => $respNewUser");
+      // print("respNewUser => $respNewUser");
 
       if( respNewUser == null || respNewUser.respuesta != "registro correcto" ){
-        print("error al crear");
+        // print("error al crear");
         Navigator.pop(context);
         scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
@@ -372,15 +372,15 @@ class LoginViewModel extends ChangeNotifier {
         },
         method: 'POST',
         fromJson: (json){
-          print("respRecoveryPwd-json => $json");
+          // print("respRecoveryPwd-json => $json");
           return ResponseRecoveryPwd.fromJson(json);
         }
       );
 
-      print("respRecoveryPwd => $respRecoveryPwd");
+      // print("respRecoveryPwd => $respRecoveryPwd");
 
       if( respRecoveryPwd == null || respRecoveryPwd.respuesta == "error" ){
-        print("Error al recuperar");
+        // print("Error al recuperar");
         Navigator.pop(context);
         scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(

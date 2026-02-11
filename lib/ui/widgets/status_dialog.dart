@@ -23,12 +23,12 @@ class StatusDialog extends StatefulWidget {
     required StatusType type,
     VoidCallback? onDismiss,
   }) {
-    debugPrint("DEBUG - Requesting StatusDialog: $title - $message");
+    // debugPrint("DEBUG - Requesting StatusDialog: $title - $message");
     return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        debugPrint("DEBUG - Building StatusDialog widget");
+        // debugPrint("DEBUG - Building StatusDialog widget");
         return StatusDialog(
           title: title,
           message: message,

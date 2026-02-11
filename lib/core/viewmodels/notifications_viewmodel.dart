@@ -81,7 +81,7 @@ class NotificationsViewModel extends ChangeNotifier {
           final lastCount = _session.notificationsCount;
           
           if (newCount > lastCount) {
-            debugPrint("DEBUG - New notifications detected! Previous: $lastCount, New: $newCount");
+            // debugPrint("DEBUG - New notifications detected! Previous: $lastCount, New: $newCount");
             _hasUnread = true;
             notifyListeners();
           }
@@ -98,7 +98,7 @@ class NotificationsViewModel extends ChangeNotifier {
 
     try {
       final company = _session.companyClave ?? "";
-      debugPrint("DEBUG - Fetching notifications for company: '$company'");
+      // debugPrint("DEBUG - Fetching notifications for company: '$company'");
       
       final response = await _requestService.handlingRequestParsed<ResponseNotifications>(
         urlParam: _urlService.getUrlInfoNotifications(),
@@ -108,14 +108,14 @@ class NotificationsViewModel extends ChangeNotifier {
         },
         method: 'POST',
         fromJson: (json) {
-          debugPrint("DEBUG - Notifications API Raw Response: $json");
+          // debugPrint("DEBUG - Notifications API Raw Response: $json");
           return ResponseNotifications.fromJson(json);
         },
       );
 
       if (response != null) {
         final st = response.respuesta.toLowerCase();
-        debugPrint("DEBUG - Notifications API status: $st, Count: ${response.datos.length}");
+        // debugPrint("DEBUG - Notifications API status: $st, Count: ${response.datos.length}");
         if (st == 'existe' || st == 'correcto' || st == 'ok' || st == 'success') {
           _notifications = response.datos;
           

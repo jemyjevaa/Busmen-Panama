@@ -13,14 +13,14 @@ class RequestService {
   /// Initialize session cookie for tracking API authentication
   Future<bool> _initSessionCookie() async {
     try {
-      print("DEBUG - Initializing GPS session cookie...");
+      //print("DEBUG - Initializing GPS session cookie...");
       final prefs = await SharedPreferences.getInstance();
       
       // Check if we already have a valid cookie
       final existingCookie = prefs.getString('gps_session_cookie');
       if (existingCookie != null && existingCookie.isNotEmpty) {
         _sessionCookie = existingCookie;
-        print("DEBUG - Using existing GPS session cookie");
+        //print("DEBUG - Using existing GPS session cookie");
         return true;
       }
 
@@ -36,15 +36,15 @@ class RequestService {
         if (setCookie != null) {
           _sessionCookie = setCookie.split(';')[0]; // Extract cookie value (JSESSIONID=...)
           await prefs.setString('gps_session_cookie', _sessionCookie!);
-          print("DEBUG - GPS session cookie initialized: ${_sessionCookie!.substring(0, 20)}...");
+          //print("DEBUG - GPS session cookie initialized: ${_sessionCookie!.substring(0, 20)}...");
           return true;
         }
       }
       
-      print("ERROR - Failed to get GPS session cookie: ${response.statusCode}");
+      // print("ERROR - Failed to get GPS session cookie: ${response.statusCode}");
       return false;
     } catch (e) {
-      print("ERROR - _initSessionCookie: $e");
+      // print("ERROR - _initSessionCookie: $e");
       return false;
     }
   }
@@ -176,8 +176,8 @@ class RequestService {
     required Map<String, String> fields,
   }) async {
     try {
-      print("DEBUG - Multipart URL: $urlParam");
-      print("DEBUG - Multipart Fields: $fields");
+      // print("DEBUG - Multipart URL: $urlParam");
+      // print("DEBUG - Multipart Fields: $fields");
 
       var request = http.MultipartRequest('POST', Uri.parse(urlParam));
       request.fields.addAll(fields);

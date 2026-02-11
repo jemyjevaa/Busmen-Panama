@@ -109,7 +109,7 @@ class LostFoundViewModel extends ChangeNotifier {
         'descripcion': descripcionConcatenada,
       };
 
-      debugPrint("DEBUG - Submitting Lost Object Info: $fields");
+      // debugPrint("DEBUG - Submitting Lost Object Info: $fields");
 
       // 4. Send Request (Multipart as required by binary endpoint)
       final response = await requestService.handlingMultipartRequest(
@@ -117,7 +117,7 @@ class LostFoundViewModel extends ChangeNotifier {
         fields: fields,
       );
 
-      debugPrint("DEBUG - Lost objects response: $response");
+      // debugPrint("DEBUG - Lost objects response: $response");
 
       _isSubmitting = false;
       notifyListeners();

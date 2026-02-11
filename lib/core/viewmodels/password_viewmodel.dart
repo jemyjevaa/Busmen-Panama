@@ -58,7 +58,7 @@ class PasswordViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      print("DEBUG - Attempting password change for identifier: $userIdentifier (Email: $email)");
+      //print("DEBUG - Attempting password change for identifier: $userIdentifier (Email: $email)");
       final success = await _changePasswordHandler(password, userIdentifier, company);
       
       _isSubmitting = false;
@@ -107,7 +107,7 @@ class PasswordViewModel extends ChangeNotifier {
       'X-Requested-With': 'XMLHttpRequest',
     };
 
-    print("DEBUG - POST to $url with params: $params");
+    //print("DEBUG - POST to $url with params: $params");
 
     final responseBody = await _requestService.handlingRequest(
       urlParam: url,
@@ -122,18 +122,18 @@ class PasswordViewModel extends ChangeNotifier {
       return false;
     }
 
-    print("DEBUG - Raw Response: $responseBody");
+    //print("DEBUG - Raw Response: $responseBody");
 
     try {
       final decoded = jsonDecode(responseBody);
       final response = GeneralOptionsResponse.fromJson(decoded);
       final isCorrect = response.respuesta.toLowerCase() == 'correcto';
-      print("DEBUG - Parsed response: ${response.respuesta} -> isCorrect: $isCorrect");
+      // print("DEBUG - Parsed response: ${response.respuesta} -> isCorrect: $isCorrect");
       return isCorrect;
     } catch (e) {
-      print("DEBUG - JSON parsing failed for password change, checking raw body contents...");
+      // print("DEBUG - JSON parsing failed for password change, checking raw body contents...");
       final containsCorrecto = responseBody.toLowerCase().contains('correcto');
-      print("DEBUG - Raw body contains 'correcto': $containsCorrecto");
+      // print("DEBUG - Raw body contains 'correcto': $containsCorrecto");
       return containsCorrecto;
     }
   }

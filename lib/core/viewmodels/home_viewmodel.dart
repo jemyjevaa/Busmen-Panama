@@ -27,7 +27,7 @@ class HomeViewModel extends ChangeNotifier {
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
     final url = Uri.parse('tel:$cleanPhone');
     
-    print("DEBUG - Attempting call to monitoring. Raw: '$phone', Clean: '$cleanPhone' (URL: $url)");
+    // print("DEBUG - Attempting call to monitoring. Raw: '$phone', Clean: '$cleanPhone' (URL: $url)");
     
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
@@ -100,11 +100,15 @@ class HomeViewModel extends ChangeNotifier {
               headingAccuracy: 0,
             );
             _currentPosition = companyPos;
-            print("DEBUG - Using Company Location: $lat, $lng");
+            //print("DEBUG - Using Company Location: $lat, $lng");
             
             // Allow map to build before animating
             if (_mapController != null) {
-              _mapController!.animateCamera(CameraUpdate.newLatLngZoom(LatLng(lat, lng), 15));
+              final position = CacheUserSession().companyLatLog!.split(',');
+
+              print("position branch ${position[0]} | ${position[1]}");
+              print("map no is null => ${LatLng(double.parse(position[0]), double.parse(position[1]))}");
+              _mapController!.animateCamera(CameraUpdate.newLatLngZoom( LatLng(double.parse(position[0]), double.parse(position[1])) , 15));
             }
           }
         }
@@ -136,12 +140,18 @@ class HomeViewModel extends ChangeNotifier {
       }
 
       _currentPosition = await Geolocator.getCurrentPosition();
-      
+
+      final position = CacheUserSession().companyLatLog!.split(',');
+
+      print("position branch ${position[0]} | ${position[1]}");
+      print("fist position ${_currentPosition!.latitude} | ${_currentPosition!.longitude}");
+
       if (!_isDisposed && _mapController != null && _currentPosition != null) {
         try {
           _mapController!.animateCamera(
             CameraUpdate.newLatLng(
-              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+              // LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+              LatLng(double.parse(position[0]), double.parse(position[1])),
             ),
           );
         } catch (e) {
