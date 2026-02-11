@@ -1926,6 +1926,256 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
 
   @override
   Widget build(BuildContext context) {
+    const double headerHeight = 140; // altura segura para tu header
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+
+          /// PAGEVIEW (AHORA LIMITADO PARA NO INVADIR EL HEADER)
+          Positioned.fill(
+            top: headerHeight,
+            child: PageView.builder(
+              controller: _pageController,
+              physics: _isZoomed
+                  ? const NeverScrollableScrollPhysics()
+                  : const BouncingScrollPhysics(),
+              itemCount:
+              widget.flyers.isEmpty ? 1 : widget.flyers.length,
+              onPageChanged: (index) {
+                setState(() => _currentIndex = index);
+              },
+              itemBuilder: (context, index) {
+                if (widget.flyers.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline_rounded,
+                            color: Colors.white.withOpacity(0.5),
+                            size: 60),
+                        const SizedBox(height: 20),
+                        Text(
+                          context
+                              .read<LanguageService>()
+                              .getString('no_flyers_to_show')
+                              .replaceFirst(
+                              '{title}', widget.title.toLowerCase()),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final flyer = widget.flyers[index];
+
+                return InteractiveViewer(
+                  transformationController:
+                  _transformationController,
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  onInteractionStart: (_) {
+                    setState(() {
+                      _isZoomed = true;
+                    });
+                  },
+                  onInteractionEnd: (_) {
+                    final scale =
+                    _transformationController.value
+                        .getMaxScaleOnAxis();
+
+                    if (scale <= 1.0) {
+                      setState(() {
+                        _isZoomed = false;
+                      });
+                    }
+                  },
+                  child: Center(
+                    child: Image.network(
+                      flyer.url,
+                      fit: BoxFit.contain,
+                      loadingBuilder:
+                          (context, child, loadingProgress) {
+                        if (loadingProgress == null)
+                          return child;
+                        return const Center(
+                          child: CircularProgressIndicator(
+                              color: Colors.white),
+                        );
+                      },
+                      errorBuilder:
+                          (context, error, stackTrace) {
+                        return const Center(
+                          child: Text(
+                            "Error al cargar imagen",
+                            style: TextStyle(
+                                color: Colors.white),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          /// TAP ZONES (AHORA TAMBIÉN RESPETAN EL HEADER)
+          Positioned.fill(
+            top: headerHeight,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Listener(
+                    behavior:
+                    HitTestBehavior.translucent,
+                    onPointerUp: (_) {
+                      if (_isZoomed) return;
+
+                      if (_currentIndex > 0) {
+                        _pageController.previousPage(
+                          duration: const Duration(
+                              milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+                Expanded(
+                  child: Listener(
+                    behavior:
+                    HitTestBehavior.translucent,
+                    onPointerUp: (_) {
+                      if (_isZoomed) return;
+
+                      if (_currentIndex <
+                          widget.flyers.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(
+                              milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          /// HEADER ORIGINAL (NO MODIFICADO)
+          Positioned(
+            top: 60,
+            left: 10,
+            right: 10,
+            child: Column(
+              children: [
+                if (widget.flyers.isNotEmpty)
+                  Row(
+                    children: List.generate(
+                      widget.flyers.length,
+                          (index) => Expanded(
+                        child: Padding(
+                          padding:
+                          const EdgeInsets.symmetric(
+                              horizontal: 2),
+                          child:
+                          LinearProgressIndicator(
+                            value: index <
+                                _currentIndex
+                                ? 1.0
+                                : 0.0,
+                            backgroundColor:
+                            Colors.white24,
+                            valueColor:
+                            const AlwaysStoppedAnimation<
+                                Color>(
+                                Colors.white),
+                            minHeight: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title
+                                .toUpperCase(),
+                            style:
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight:
+                              FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (widget
+                              .flyers.isNotEmpty) ...[
+                            Text(
+                              widget.flyers[
+                              _currentIndex]
+                                  .nombre,
+                              style:
+                              const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow:
+                              TextOverflow
+                                  .ellipsis,
+                            ),
+                            Text(
+                              "${context.read<LanguageService>().getString('published_at')} ${widget.flyers[_currentIndex].fecha_alta}",
+                              style:
+                              const TextStyle(
+                                color:
+                                Colors.white60,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 28),
+                      onPressed: () =>
+                          Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+/*@override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -2217,7 +2467,7 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
         ],
       ),
     );
-  }
+  }*/
 }
 
 
