@@ -53,6 +53,14 @@ class CacheUserSession {
 
   String? get companyPhone => _prefs?.getString('companyPhone');
   set companyPhone(String? value) => _prefs?.setString('companyPhone', value ?? '');
+
+  String get colorOne => _prefs?.getString('colorOne')?? "#064DC3";
+  set colorOne(String? value) => _prefs?.setString('colorOne', value ?? '#064DC3');
+
+  String get colorTwo => _prefs?.getString('colorTwo')?? "#064DC3";
+  set colorTwo(String? value) => _prefs?.setString('colorTwo', value ?? '#064DC3');
+
+
   // endregion COMPANY DATA
 
   // region USER DATA
@@ -109,6 +117,8 @@ class CacheUserSession {
     userRuta3 = "";
     userRuta4 = "";
     userPassword = "";
+    colorOne = "#064DC3";
+    colorTwo = "#064DC3";
     notificationsCount = 0;
   }
 

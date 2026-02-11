@@ -200,6 +200,8 @@ class LoginViewModel extends ChangeNotifier {
       print("DEBUG - FULL COMPANY API RESPONSE READY");
       
       print("DEBUG - COMPANY CLAVE FROM API: '${respCompany.datos.first.clave}'");
+      CacheUserSession().colorOne = respCompany.datos.first.color1.isEmpty? CacheUserSession().colorOne:respCompany.datos.first.color1;
+      CacheUserSession().colorTwo = respCompany.datos.first.color2.isEmpty? CacheUserSession().colorTwo:respCompany.datos.first.color2;
 
       // Determine userSide based on company (Case insensitive)
       final claveUpper = respCompany.datos.first.clave.toUpperCase();

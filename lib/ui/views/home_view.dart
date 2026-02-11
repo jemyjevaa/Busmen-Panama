@@ -14,6 +14,7 @@ import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
 import 'package:busmen_panama/core/services/models/info_schedules_model.dart'; // Added for RouteData
 
 
+import '../../app_globals.dart';
 import '../../core/services/cache_user_session.dart';
 import '../../core/services/socket_service.dart';
 
@@ -457,8 +458,8 @@ class _HomeViewState extends State<HomeView> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 80, bottom: 20, left: 20, right: 20), // Lowered header
-            decoration: const BoxDecoration(
-              color: Color(0xFF064DC3),
+            decoration: BoxDecoration(
+              color: hexColor(CacheUserSession().colorOne),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1893,107 +1894,6 @@ class _HomeViewState extends State<HomeView> {
 
 }
 
-class _FlyerStories extends StatelessWidget {
-  final SchedulesViewModel model;
-  const _FlyerStories({required this.model});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 100,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        children: [
-          if (model.bulletins.isNotEmpty)
-            _StoryCircle(
-              title: context.read<LanguageService>().getString('announcements'),
-              color: Colors.blue,
-              icon: Icons.notifications_active_rounded,
-              flyers: model.bulletins,
-            ),
-          if (model.regulations.isNotEmpty)
-            _StoryCircle(
-              title: context.read<LanguageService>().getString('regulations'),
-              color: Colors.purple,
-              icon: Icons.gavel_rounded,
-              flyers: model.regulations,
-            ),
-          if (model.manuals.isNotEmpty)
-            _StoryCircle(
-              title: context.read<LanguageService>().getString('manual'),
-              color: Colors.teal,
-              icon: Icons.menu_book_rounded,
-              flyers: model.manuals,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StoryCircle extends StatelessWidget {
-  final String title;
-  final Color color;
-  final IconData icon;
-  final List<FlyerData> flyers;
-
-  const _StoryCircle({
-    required this.title,
-    required this.color,
-    required this.icon,
-    required this.flyers,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 20),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => _FlyerStoryViewer(flyers: flyers, title: title),
-            ),
-          );
-        },
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [color.withOpacity(0.8), color],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: CircleAvatar(
-                  radius: 30,
-                  backgroundColor: color.withOpacity(0.1),
-                  child: Icon(icon, color: color, size: 28),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF333333)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _FlyerStoryViewer extends StatefulWidget {
   final List<FlyerData> flyers;
   final String title;
@@ -2005,6 +1905,9 @@ class _FlyerStoryViewer extends StatefulWidget {
 }
 
 class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
+  final TransformationController _transformationController = TransformationController();
+  bool _isZoomed = false;
+
   late PageController _pageController;
   int _currentIndex = 0;
 
@@ -2017,16 +1920,267 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
   @override
   void dispose() {
     _pageController.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const double headerHeight = 140; // altura segura para tu header
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          PageView.builder(
+
+          /// PAGEVIEW (AHORA LIMITADO PARA NO INVADIR EL HEADER)
+          Positioned.fill(
+            top: headerHeight,
+            child: PageView.builder(
+              controller: _pageController,
+              physics: _isZoomed
+                  ? const NeverScrollableScrollPhysics()
+                  : const BouncingScrollPhysics(),
+              itemCount:
+              widget.flyers.isEmpty ? 1 : widget.flyers.length,
+              onPageChanged: (index) {
+                setState(() => _currentIndex = index);
+              },
+              itemBuilder: (context, index) {
+                if (widget.flyers.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline_rounded,
+                            color: Colors.white.withOpacity(0.5),
+                            size: 60),
+                        const SizedBox(height: 20),
+                        Text(
+                          context
+                              .read<LanguageService>()
+                              .getString('no_flyers_to_show')
+                              .replaceFirst(
+                              '{title}', widget.title.toLowerCase()),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final flyer = widget.flyers[index];
+
+                return InteractiveViewer(
+                  transformationController:
+                  _transformationController,
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  onInteractionStart: (_) {
+                    setState(() {
+                      _isZoomed = true;
+                    });
+                  },
+                  onInteractionEnd: (_) {
+                    final scale =
+                    _transformationController.value
+                        .getMaxScaleOnAxis();
+
+                    if (scale <= 1.0) {
+                      setState(() {
+                        _isZoomed = false;
+                      });
+                    }
+                  },
+                  child: Center(
+                    child: Image.network(
+                      flyer.url,
+                      fit: BoxFit.contain,
+                      loadingBuilder:
+                          (context, child, loadingProgress) {
+                        if (loadingProgress == null)
+                          return child;
+                        return const Center(
+                          child: CircularProgressIndicator(
+                              color: Colors.white),
+                        );
+                      },
+                      errorBuilder:
+                          (context, error, stackTrace) {
+                        return const Center(
+                          child: Text(
+                            "Error al cargar imagen",
+                            style: TextStyle(
+                                color: Colors.white),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          /// TAP ZONES (AHORA TAMBIÉN RESPETAN EL HEADER)
+          Positioned.fill(
+            top: headerHeight,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Listener(
+                    behavior:
+                    HitTestBehavior.translucent,
+                    onPointerUp: (_) {
+                      if (_isZoomed) return;
+
+                      if (_currentIndex > 0) {
+                        _pageController.previousPage(
+                          duration: const Duration(
+                              milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+                Expanded(
+                  child: Listener(
+                    behavior:
+                    HitTestBehavior.translucent,
+                    onPointerUp: (_) {
+                      if (_isZoomed) return;
+
+                      if (_currentIndex <
+                          widget.flyers.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(
+                              milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    },
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          /// HEADER ORIGINAL (NO MODIFICADO)
+          Positioned(
+            top: 60,
+            left: 10,
+            right: 10,
+            child: Column(
+              children: [
+                if (widget.flyers.isNotEmpty)
+                  Row(
+                    children: List.generate(
+                      widget.flyers.length,
+                          (index) => Expanded(
+                        child: Padding(
+                          padding:
+                          const EdgeInsets.symmetric(
+                              horizontal: 2),
+                          child:
+                          LinearProgressIndicator(
+                            value: index <
+                                _currentIndex
+                                ? 1.0
+                                : 0.0,
+                            backgroundColor:
+                            Colors.white24,
+                            valueColor:
+                            const AlwaysStoppedAnimation<
+                                Color>(
+                                Colors.white),
+                            minHeight: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title
+                                .toUpperCase(),
+                            style:
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight:
+                              FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (widget
+                              .flyers.isNotEmpty) ...[
+                            Text(
+                              widget.flyers[
+                              _currentIndex]
+                                  .nombre,
+                              style:
+                              const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow:
+                              TextOverflow
+                                  .ellipsis,
+                            ),
+                            Text(
+                              "${context.read<LanguageService>().getString('published_at')} ${widget.flyers[_currentIndex].fecha_alta}",
+                              style:
+                              const TextStyle(
+                                color:
+                                Colors.white60,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 28),
+                      onPressed: () =>
+                          Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+/*@override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          /*PageView.builder(
             controller: _pageController,
             itemCount: widget.flyers.length == 0 ? 1 : widget.flyers.length,
             onPageChanged: (index) {
@@ -2051,11 +2205,34 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
 
               final flyer = widget.flyers[index];
               return Container(
-// ...
                 width: double.infinity,
                 height: double.infinity,
                 alignment: Alignment.center,
-                child: Image.network(
+                child: InteractiveViewer(
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  child: Image.network(
+                    flyer.url,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Text(
+                          "Error al cargar imagen",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                /*child: Image.network(
                   flyer.url,
                   fit: BoxFit.contain,
                   loadingBuilder: (context, child, loadingProgress) {
@@ -2067,17 +2244,100 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
                       child: Text("Error al cargar imagen", style: TextStyle(color: Colors.white)),
                     );
                   },
+                ),*/
+              );
+            },
+          ),*/
+          PageView.builder(
+            controller: _pageController,
+            physics: _isZoomed
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
+            itemCount: widget.flyers.length == 0 ? 1 : widget.flyers.length,
+            onPageChanged: (index) {
+              setState(() => _currentIndex = index);
+            },
+            itemBuilder: (context, index) {
+              if (widget.flyers.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outline_rounded,
+                          color: Colors.white.withOpacity(0.5), size: 60),
+                      const SizedBox(height: 20),
+                      Text(
+                        context
+                            .read<LanguageService>()
+                            .getString('no_flyers_to_show')
+                            .replaceFirst('{title}', widget.title.toLowerCase()),
+                        style: const TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final flyer = widget.flyers[index];
+
+              return Container(
+                width: double.infinity,
+                height: double.infinity,
+                alignment: Alignment.center,
+                child: InteractiveViewer(
+                  transformationController: _transformationController,
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  onInteractionStart: (_) {
+                    setState(() {
+                      _isZoomed = true; // bloquea PageView inmediatamente
+                    });
+                  },
+                  onInteractionEnd: (_) {
+                    final scale =
+                    _transformationController.value.getMaxScaleOnAxis();
+
+                    if (scale <= 1.0) {
+                      setState(() {
+                        _isZoomed = false; // reactiva PageView solo si volvió a escala normal
+                      });
+                    }
+                  },
+                  child: Center(
+                    child: Image.network(
+                      flyer.url,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(
+                          child: Text(
+                            "Error al cargar imagen",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               );
             },
           ),
 
           // Tap areas for navigation (Moved below header so header remains clickable)
-          Row(
+          /*Row(
             children: [
               Expanded(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
                   onTap: () {
+                    if (_isZoomed) return;
                     if (_currentIndex > 0) {
                       _pageController.previousPage(
                         duration: const Duration(milliseconds: 300),
@@ -2090,7 +2350,9 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
               ),
               Expanded(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
                   onTap: () {
+                    if (_isZoomed) return;
                     if (_currentIndex < widget.flyers.length - 1) {
                       _pageController.nextPage(
                         duration: const Duration(milliseconds: 300),
@@ -2102,7 +2364,44 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
                 ),
               ),
             ],
+          ),*/
+          Row(
+            children: [
+              Expanded(
+                child: Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerUp: (_) {
+                    if (_isZoomed) return;
+
+                    if (_currentIndex > 0) {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              Expanded(
+                child: Listener(
+                  behavior: HitTestBehavior.translucent,
+                  onPointerUp: (_) {
+                    if (_isZoomed) return;
+
+                    if (_currentIndex < widget.flyers.length - 1) {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
+                  },
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ],
           ),
+
 
           // Header with Progress Bars
           Positioned(
@@ -2168,7 +2467,7 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
         ],
       ),
     );
-  }
+  }*/
 }
 
 
@@ -2309,11 +2608,6 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                           ),
                           trailing: const Icon(Icons.info_outline_rounded, size: 20, color: Colors.grey),
                           onTap: () {
-                             // We don't have access to _showRouteDetailsModal directly here since it's in HomeViewState
-                             // but we can pass it via callback or use context to find it if it was a separate widget logic.
-                             // For now, I'll just trigger the selection directly or show details if possible.
-                             // Actually, _showRouteDetailsModal is inside HomeViewState. 
-                             // I'll make selective use of the model.
                              widget.model.selectRoute(route);
                              Navigator.pop(context);
                           },
@@ -2360,7 +2654,7 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
     );
   }
 
-  Widget _buildTramoChip(String tramo) {
+  /*Widget _buildTramoChip(String tramo) {
     final isSelected = _selectedTramo == tramo;
     return ChoiceChip(
       label: Text(tramo),
@@ -2383,8 +2677,9 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
       ),
       showCheckmark: false,
     );
-  }
+  }*/
 }
+
 class _BlinkingDot extends StatefulWidget {
   const _BlinkingDot();
 
