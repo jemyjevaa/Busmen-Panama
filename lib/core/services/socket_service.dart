@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/main.dart';
 import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
 import 'package:busmen_panama/core/services/url_service.dart';
@@ -91,9 +92,12 @@ class SocketService {
       final url = Uri.parse(_urlService.getUrlSocket());
       print("DEBUG - Connecting to WebSocket: $url");
       
-      _channel = WebSocketChannel.connect(
+      _channel = IOWebSocketChannel.connect(
         url,
-        protocols: null,
+        headers: {
+          'Cookie': _sessionCookie!,
+          'Origin': 'https://www.rastreobusmenpa.geovoy.com/',
+        },
       );
 
       // Note: web_socket_channel doesn't support custom headers directly
@@ -126,23 +130,36 @@ class SocketService {
     try {
       final Map<String, dynamic> message = data is String ? json.decode(data) : data;
       
-      // Filter by device IDs if available
-      if (_deviceIds.isNotEmpty) {
-        final deviceId = message['deviceId'] ?? message['id'] ?? message['idplataformagps'];
-        if (deviceId != null) {
-          final intId = deviceId is int ? deviceId : int.tryParse(deviceId.toString());
-          if (intId != null && !_deviceIds.contains(intId)) {
-            return; // Ignore messages from other devices
+      // Check if this is a positions update
+      if (message.containsKey('positions')) {
+        final List<dynamic> positions = message['positions'];
+        
+        // Process each position in the array
+        for (var positionData in positions) {
+          final Map<String, dynamic> position = positionData as Map<String, dynamic>;
+          
+          // Filter by device IDs if available
+          if (_deviceIds.isNotEmpty) {
+            final deviceId = position['deviceId'] ?? position['id'] ?? position['idplataformagps'] ?? position['device_id'];
+            
+            if (deviceId != null) {
+              final intId = deviceId is int ? deviceId : int.tryParse(deviceId.toString());
+              if (intId != null && !_deviceIds.contains(intId)) {
+                continue; // Skip this position - not our unit
+              } else if (intId != null) {
+                print("✅ Position update for unit $intId: lat=${position['latitude']}, lon=${position['longitude']}");
+              }
+            }
+          }
+          
+          // Emit this position update
+          if (position.containsKey('latitude') || position.containsKey('lat') || position.containsKey('latitud')) {
+            _positionController?.add(position);
           }
         }
       }
-
-      // Emit position update
-      if (message.containsKey('latitude') || message.containsKey('lat')) {
-        _positionController?.add(message);
-      }
     } catch (e) {
-      print("ERROR - Failed to parse WebSocket message: $e");
+      print("ERROR - WebSocket parsing failed: $e");
     }
   }
 

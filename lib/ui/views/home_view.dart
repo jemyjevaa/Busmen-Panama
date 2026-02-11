@@ -27,14 +27,28 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> {
   bool _isMapMenuOpen = false;
+  BitmapDescriptor? _busIcon;
 
   @override
   void initState() {
     super.initState();
+    _loadCustomMarkers();
     // Initialize location access
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeViewModel>().getUserLocation();
     });
+  }
+
+  Future<void> _loadCustomMarkers() async {
+    try {
+      _busIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/icons/bus_motion.png',
+      );
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('Error loading bus icon: $e');
+    }
   }
 
   @override
@@ -1638,7 +1652,8 @@ class _HomeViewState extends State<HomeView> {
       markers.add(Marker(
         markerId: const MarkerId('unit'),
         position: LatLng(double.tryParse(model.unit!.lat) ?? 0, double.tryParse(model.unit!.lon) ?? 0),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
+        icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueCyan),
+        anchor: const Offset(0.5, 0.5),
         infoWindow: InfoWindow(title: "Unidad: ${model.unit!.economico}"),
       ));
     }
@@ -2608,7 +2623,21 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                           ),
                           trailing: const Icon(Icons.info_outline_rounded, size: 20, color: Colors.grey),
                           onTap: () {
-                             widget.model.selectRoute(route);
+                             // We don't have access to _showRouteDetailsModal directly here since it's in HomeViewState
+                             // but we can pass it via callback or use context to find it if it was a separate widget logic.
+                             // For now, I'll just trigger the selection directly or show details if possible.
+                             // Actually, _showRouteDetailsModal is inside HomeViewState. 
+                             // I'll make selective use of the model.
+                             widget.model.selectRoute(route, onRouteLoaded: () {
+                               // Move camera to route after data loads
+                               if (widget.model.stops.isNotEmpty) {
+                                 final homeViewModel = context.read<HomeViewModel>();
+                                 final points = widget.model.stops
+                                     .map((s) => LatLng(s.latitud, s.longitud))
+                                     .toList();
+                                 homeViewModel.moveCameraToRoute(points);
+                               }
+                             });
                              Navigator.pop(context);
                           },
                         ),
