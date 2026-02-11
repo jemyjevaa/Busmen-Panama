@@ -51,7 +51,7 @@ class HomeViewModel extends ChangeNotifier {
   bool _isLoadingLocation = true;
   bool get isLoadingLocation => _isLoadingLocation;
 
-  int get userSide => _session.userSide;
+  int? get userSide => _session.userSide;
 
   void setSide(int side) {
     _session.userSide = side;
@@ -263,7 +263,7 @@ class HomeViewModel extends ChangeNotifier {
     _session.userSide = 1; // Reset side preference
     
     // OneSignal cleanup
-    SocketService().removeOneSignalTags();
+    //SocketService().removeOneSignalTags();
     
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(

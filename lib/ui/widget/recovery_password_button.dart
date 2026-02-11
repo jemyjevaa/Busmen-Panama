@@ -1,6 +1,7 @@
 import 'package:busmen_panama/ui/widget/text_field.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/services/cache_user_session.dart';
 import '../../core/services/language_service.dart';
 import '../../core/viewmodels/login_viewmodel.dart';
 
@@ -48,7 +49,7 @@ class _RecoveryButtonState extends State<RecoveryButton>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
+    return CacheUserSession().isCopaair? FadeTransition(
       opacity: _fadeAnimation,
       child: SizedBox(
         width: double.infinity,
@@ -77,7 +78,8 @@ class _RecoveryButtonState extends State<RecoveryButton>
           ),
         ),
       ),
-    );
+    )
+    : const SizedBox();
   }
 
 
