@@ -1,3 +1,4 @@
+import 'package:busmen_panama/core/services/models/qr_route_model.dart';
 import 'package:busmen_panama/core/services/cache_user_session.dart';
 import 'package:busmen_panama/core/services/socket_service.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
@@ -9,6 +10,86 @@ import 'package:url_launcher/url_launcher.dart';
 class HomeViewModel extends ChangeNotifier {
   final _session = CacheUserSession();
   bool _isDisposed = false;
+  QRRouteResponse? _qrRoute;
+  QRRouteResponse? get qrRoute => _qrRoute;
+  bool get isOfflineMode => _qrRoute != null;
+
+  void setQRRoute(QRRouteResponse route) {
+    _qrRoute = route;
+    _isLoadingLocation = false;
+    notifyListeners();
+    
+    // Center map on the first stop of the QR route
+    if (route.paradas.isNotEmpty) {
+      centerOnQRRoute();
+    }
+  }
+
+  Future<void> centerOnQRRoute() async {
+    if (_mapController == null || _qrRoute == null || _qrRoute!.paradas.isEmpty) return;
+    
+    try {
+      if (_qrRoute!.paradas.length == 1) {
+        final stop = _qrRoute!.paradas.first;
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(LatLng(stop.latitud, stop.longitud), 15),
+        );
+      } else {
+        double minLat = _qrRoute!.paradas.first.latitud;
+        double maxLat = _qrRoute!.paradas.first.latitud;
+        double minLng = _qrRoute!.paradas.first.longitud;
+        double maxLng = _qrRoute!.paradas.first.longitud;
+
+        for (var stop in _qrRoute!.paradas) {
+          if (stop.latitud < minLat) minLat = stop.latitud;
+          if (stop.latitud > maxLat) maxLat = stop.latitud;
+          if (stop.longitud < minLng) minLng = stop.longitud;
+          if (stop.longitud > maxLng) maxLng = stop.longitud;
+        }
+
+        final bounds = LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        );
+        
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 100), // 100 padding
+        );
+      }
+    } catch (e) {
+      debugPrint('Error centering on QR route: $e');
+      // Fallback to first stop if bounds fail
+      final firstStop = _qrRoute!.paradas.first;
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(firstStop.latitud, firstStop.longitud), 15),
+      );
+    }
+  }
+
+  bool get isQRRouteActive {
+    if (_qrRoute == null) return false;
+    try {
+      final now = DateTime.now();
+      final startTimeStr = _qrRoute!.frecuencia.horaInicio; // e.g., "14:44:00"
+      final parts = startTimeStr.split(':');
+      if (parts.length >= 2) {
+        final startHour = int.parse(parts[0]);
+        final startMin = int.parse(parts[1]);
+        
+        // Simple logic: route is active if current time is within 1 hour of start time
+        // Or we could just show "ACTIVA" based on some other criteria.
+        // The user said: "banner que indique si esta en horario o no"
+        // Let's assume a route duration of 2 hours for now.
+        final startTime = DateTime(now.year, now.month, now.day, startHour, startMin);
+        final endTime = startTime.add(const Duration(hours: 2));
+        
+        return now.isAfter(startTime) && now.isBefore(endTime);
+      }
+    } catch (e) {
+      debugPrint("Error calculating QR route activity: $e");
+    }
+    return false;
+  }
 
   @override
   void notifyListeners() {
@@ -70,7 +151,12 @@ class HomeViewModel extends ChangeNotifier {
 
   void onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    if (_currentPosition != null) {
+    if (_qrRoute != null && _qrRoute!.paradas.isNotEmpty) {
+      final firstStop = _qrRoute!.paradas.first;
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(firstStop.latitud, firstStop.longitud), 15),
+      );
+    } else if (_currentPosition != null) {
        _mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(
           LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
@@ -81,6 +167,8 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> getUserLocation() async {
+    if (isOfflineMode) return;
+    
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -205,8 +293,16 @@ class HomeViewModel extends ChangeNotifier {
 
   Future<void> moveCameraToRoute(List<LatLng> points) async {
     print("🎥 moveCameraToRoute: points=${points.length}, controller=${_mapController != null}");
-    if (_mapController == null || points.isEmpty) {
-      if (_mapController == null) print("❌ No map controller found for centering!");
+    if (_mapController == null) {
+      print("⚠️ Map controller not ready yet... Waiting.");
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (_mapController == null) {
+         print("❌ Map controller still null after wait. Aborting move.");
+         return;
+      }
+    }
+    if (points.isEmpty) {
+      print("❌ No points provided for centering!");
       return;
     }
 

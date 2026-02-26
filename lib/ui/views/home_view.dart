@@ -12,6 +12,7 @@ import 'package:busmen_panama/ui/views/password_view.dart';
 import 'package:busmen_panama/ui/views/notification_view.dart';
 import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
 import 'package:busmen_panama/core/services/models/info_schedules_model.dart'; // Added for RouteData
+import 'package:busmen_panama/core/services/models/qr_route_model.dart';
 
 
 import '../../app_globals.dart';
@@ -19,7 +20,8 @@ import '../../core/services/cache_user_session.dart';
 import '../../core/services/socket_service.dart';
 
 class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+  final QRRouteResponse? qrRoute;
+  const HomeView({super.key, this.qrRoute});
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -36,7 +38,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     _loadCustomMarkers();
     // Initialize location access
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HomeViewModel>().getUserLocation();
+      final viewModel = context.read<HomeViewModel>();
+      if (widget.qrRoute != null) {
+        viewModel.setQRRoute(widget.qrRoute!);
+      } else {
+        viewModel.getUserLocation();
+      }
     });
   }
 
@@ -91,21 +98,27 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final bool isRouteActive = selectedRoute != null && schedulesViewModel.isRouteActiveNow(selectedRoute);
 
     return Scaffold(
-      drawer: _buildDrawer(context, viewModel, localization),
+      drawer: viewModel.isOfflineMode ? null : _buildDrawer(context, viewModel, localization),
       body: viewModel.isLoadingLocation
           ? const Center(child: CircularProgressIndicator())
           : Builder(
               builder: (context) => Stack(
                 children: [
                   GoogleMap(
+                    key: ValueKey(viewModel.isOfflineMode ? 'offline_map_${viewModel.qrRoute?.metadata.idFrecuencia}' : 'online_map'),
                     mapType: viewModel.currentMapType,
                     initialCameraPosition: CameraPosition(
                       target: () {
-                        // 1. Check currentPosition (might be company if ViewModel finished quickly)
+                        // 0. Check QR Route (Priority)
+                        if (viewModel.isOfflineMode && viewModel.qrRoute!.paradas.isNotEmpty) {
+                          final firstStop = viewModel.qrRoute!.paradas.first;
+                          return LatLng(firstStop.latitud, firstStop.longitud);
+                        }
+                        // 1. Check currentPosition
                         if (viewModel.currentPosition != null) {
                           return LatLng(viewModel.currentPosition!.latitude, viewModel.currentPosition!.longitude);
                         }
-                        // 2. Check Company LatLog directly from Session for the very first frame
+                        // 2. Check Company LatLog
                         final companyLatLog = CacheUserSession().companyLatLog;
                         if (companyLatLog != null && companyLatLog.isNotEmpty) {
                           final parts = companyLatLog.split(',');
@@ -117,17 +130,21 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                             }
                           }
                         }
-                        // 3. Fallback
                         return const LatLng(8.9824, -79.5199);
                       }(),
                       zoom: 15,
                     ),
-                    onMapCreated: viewModel.onMapCreated,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
+                    onMapCreated: (controller) {
+                      viewModel.onMapCreated(controller);
+                      if (viewModel.isOfflineMode) {
+                        viewModel.centerOnQRRoute();
+                      }
+                    },
+                    myLocationEnabled: !viewModel.isOfflineMode,
+                    myLocationButtonEnabled: !viewModel.isOfflineMode,
                     padding: const EdgeInsets.only(top: 100),
-                    markers: _buildMapMarkers(schedulesViewModel, localization, schedulesViewModel.selectedRoute),
-                    polylines: _buildMapPolylines(schedulesViewModel),
+                    markers: _buildMapMarkers(viewModel, schedulesViewModel, localization, schedulesViewModel.selectedRoute),
+                    polylines: _buildMapPolylines(viewModel, schedulesViewModel),
                   ),
 
                   // Top Left Menu Button
@@ -135,30 +152,38 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     top: 70,
                     left: 20,
                     child: _buildCircleButton(
-                      icon: Icons.menu,
+                      icon: viewModel.isOfflineMode ? Icons.arrow_back : Icons.menu,
                       onTap: () {
-                        Scaffold.of(context).openDrawer();
+                        if (viewModel.isOfflineMode) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginView()),
+                            (route) => false,
+                          );
+                        } else {
+                          Scaffold.of(context).openDrawer();
+                        }
                       },
                     ),
                   ),
 
-                   // Top Center Notifications Button
-                  Positioned(
-                    top: 70,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: _buildNotificationButton(
-                        hasUnread: notificationsViewModel.hasUnread,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const NotificationView()),
-                          );
-                        },
+                  if (!viewModel.isOfflineMode)
+                    Positioned(
+                      top: 70,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _buildNotificationButton(
+                          hasUnread: notificationsViewModel.hasUnread,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const NotificationView()),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
 
                   // Top Right Map Type FAB Menu
                   Positioned(
@@ -248,100 +273,96 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                       _showRouteSelectionSheet(context, viewModel, localization);
                                     }
                                   },
-                                  child: Container(
-                                    height: 75,
-                                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(20), // Less "pill", more search-bar like
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.12),
-                                          blurRadius: 15,
-                                          offset: const Offset(0, 8),
-                                        ),
-                                      ],
-                                      border: Border.all(color: Colors.grey[100]!),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      selectedRoute?.nombre ?? localization.getString('route_not_selected'),
-                                                      style: const TextStyle(
-                                                        color: Color(0xFF333333),
-                                                        fontWeight: FontWeight.w900,
-                                                        fontSize: 15,
-                                                        letterSpacing: -0.2,
+                                    child: Container(
+                                      height: 75,
+                                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20), // Less "pill", more search-bar like
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.12),
+                                            blurRadius: 15,
+                                            offset: const Offset(0, 8),
+                                          ),
+                                        ],
+                                        border: Border.all(color: Colors.grey[100]!),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        viewModel.isOfflineMode 
+                                                          ? viewModel.qrRoute!.frecuencia.ruta.nombre 
+                                                          : (selectedRoute?.nombre ?? localization.getString('route_not_selected')),
+                                                        style: const TextStyle(
+                                                          color: Color(0xFF333333),
+                                                          fontWeight: FontWeight.w900,
+                                                          fontSize: 15,
+                                                          letterSpacing: -0.2,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
                                                       ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
                                                     ),
-                                                  ),
-                                                  if (isRouteActive) ...[
-                                                    const SizedBox(width: 8),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green[50],
-                                                        borderRadius: BorderRadius.circular(4),
-                                                        border: Border.all(color: Colors.green[200]!, width: 0.5),
-                                                      ),
-                                                      child: Row(
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        children: [
-                                                          const _BlinkingDot(),
-                                                          const SizedBox(width: 4),
-                                                          Text(
-                                                            "VIVO",
-                                                            style: TextStyle(
-                                                              color: Colors.green[700],
-                                                              fontWeight: FontWeight.bold,
-                                                              fontSize: 8,
+                                                    if (viewModel.isOfflineMode ? viewModel.isQRRouteActive : isRouteActive) ...[
+                                                      const SizedBox(width: 8),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.green[50],
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          border: Border.all(color: Colors.green[200]!, width: 0.5),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            const _BlinkingDot(),
+                                                            const SizedBox(width: 4),
+                                                            Text(
+                                                              viewModel.isOfflineMode ? "ACTIVA" : "VIVO",
+                                                              style: TextStyle(
+                                                                color: Colors.green[700],
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: 8,
+                                                              ),
                                                             ),
-                                                          ),
-                                                        ],
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
+                                                    ],
                                                   ],
-                                                ],
-                                              ),
-                                              const SizedBox(height: 4),
-                                              if (isRouteActive && schedulesViewModel.getCurrentStop() != null)
+                                                ),
+                                                const SizedBox(height: 4),
                                                 Text(
-                                                  "${localization.getString('current_stop_label')}: ${schedulesViewModel.getCurrentStop()!.nombre_parada}",
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF064DC3),
+                                                  viewModel.isOfflineMode 
+                                                      ? (viewModel.isQRRouteActive ? "EN HORARIO" : "FUERA DE HORARIO")
+                                                      : (isRouteActive ? (schedulesViewModel.getCurrentStop() != null ? "${localization.getString('current_stop_label')}: ${schedulesViewModel.getCurrentStop()!.nombre_parada}" : localization.getString('live_tracking')) : "FUERA DE HORARIO"),
+                                                  style: TextStyle(
+                                                    color: (viewModel.isOfflineMode ? viewModel.isQRRouteActive : isRouteActive) ? Colors.grey[600] : Colors.orange[800],
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 11,
                                                   ),
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
-                                                )
-                                              else
-                                                Text(
-                                                  isRouteActive ? localization.getString('live_tracking') : "FUERA DE HORARIO",
-                                                  style: TextStyle(
-                                                    color: isRouteActive ? Colors.grey[600] : Colors.orange[800],
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 11,
-                                                  ),
                                                 ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Icon(Icons.unfold_more_rounded, color: Colors.grey[400], size: 20),
-                                      ],
+                                          if (!viewModel.isOfflineMode) ...[
+                                            const SizedBox(width: 10),
+                                            Icon(Icons.unfold_more_rounded, color: Colors.grey[400], size: 20),
+                                          ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -383,57 +404,59 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 15),
-                          // SELECT ROUTE BUTTON (UPGRADED)
-                          SizedBox(
-                            width: double.infinity,
-                            height: 60,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF064DC3).withOpacity(0.3),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: ElevatedButton(
-                                onPressed: () => _showRouteSelectionSheet(context, viewModel, localization),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF064DC3),
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                                  padding: EdgeInsets.zero,
-                                ).copyWith(
-                                  backgroundColor: MaterialStateProperty.resolveWith((states) => null), // Use decoration
-                                ),
-                                child: Ink(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF064DC3), Color(0xFF053E9E)],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
+                          if (!viewModel.isOfflineMode) ...[
+                            const SizedBox(height: 15),
+                            // SELECT ROUTE BUTTON (UPGRADED)
+                            SizedBox(
+                              width: double.infinity,
+                              height: 60,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(30),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF064DC3).withOpacity(0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 5),
                                     ),
-                                    borderRadius: BorderRadius.circular(30),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () => _showRouteSelectionSheet(context, viewModel, localization),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF064DC3),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                    padding: EdgeInsets.zero,
+                                  ).copyWith(
+                                    backgroundColor: MaterialStateProperty.resolveWith((states) => null), // Use decoration
                                   ),
-                                  child: Container(
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      localization.getString('select_route').toUpperCase(),
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.2,
+                                  child: Ink(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF064DC3), Color(0xFF053E9E)],
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                      ),
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        localization.getString('select_route').toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.2,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -1400,15 +1423,18 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   final homeVM = context.read<HomeViewModel>();
                   final schedVM = context.read<SchedulesViewModel>();
                   
-                  model.selectRoute(route, onRouteLoaded: () {
+                  model.selectRoute(route, onRouteLoaded: () async {
                     print("🎯 onRouteLoaded callback EXECUTED");
+                    // Wait for bottom sheet to close and map to resize
+                    await Future.delayed(const Duration(milliseconds: 300));
+                    
                     // Use captured VM instead of context.read inside async callback
                     if (schedVM.stops.isNotEmpty) {
                       print("🗺️ Centering map on ${schedVM.stops.length} stops");
                       final points = schedVM.stops
                           .map((s) => LatLng(s.latitud, s.longitud))
                           .toList();
-                      homeVM.moveCameraToRoute(points);
+                      await homeVM.moveCameraToRoute(points);
                     } else {
                       print("⚠️  No stops available for centering");
                     }
@@ -1846,7 +1872,28 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
 
-  Set<Marker> _buildMapMarkers(SchedulesViewModel model, LanguageService localization, RouteData? selectedRoute) {
+  Set<Marker> _buildMapMarkers(HomeViewModel homeViewModel, SchedulesViewModel model, LanguageService localization, RouteData? selectedRoute) {
+    // 0. Offline Mode (QR)
+    if (homeViewModel.isOfflineMode) {
+      final Set<Marker> markers = {};
+      final paradas = homeViewModel.qrRoute!.paradas;
+      
+      for (var parada in paradas) {
+        markers.add(
+          Marker(
+            markerId: MarkerId('qr_stop_${parada.numero}'),
+            position: LatLng(parada.latitud, parada.longitud),
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+            infoWindow: InfoWindow(
+              title: parada.nombre,
+              snippet: 'Parada ${parada.numero}',
+            ),
+          ),
+        );
+      }
+      return markers;
+    }
+
     Set<Marker> markers = {};
     
     // 1. Unit Marker
@@ -1876,22 +1923,19 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
 
     // 2. Stop Markers
-    final List<StopData> stopsToShow = model.showFilteredStops && model.unit != null
-        ? [
-            if (model.getPreviousStop() != null) model.getPreviousStop()!,
-            if (model.getCurrentStop() != null) model.getCurrentStop()!,
-            if (model.getNextStop() != null) model.getNextStop()!,
-          ]
-        : model.stops;
+    // Always show ALL stops, do not filter the list itself.
+    // The filter only affects the COLOR of the markers.
+    final List<StopData> stopsToShow = model.stops; 
 
     for (var stop in stopsToShow) {
       final bool isMyStop = model.selectedUserStop?.claveruta == stop.claveruta && model.selectedUserStop?.numero_parada == stop.numero_parada;
       
-      double hue = BitmapDescriptor.hueAzure; // Default
+      double hue = BitmapDescriptor.hueAzure; // Default Blue for all stops
       
+      // Apply highlighting ONLY if filter is active AND we have a tracked unit
       if (model.showFilteredStops && model.unit != null) {
         if (stop.numero_parada == model.getPreviousStop()?.numero_parada) {
-          hue = BitmapDescriptor.hueViolet; // Closest to Black for default hues
+          hue = BitmapDescriptor.hueViolet; 
         } else if (stop.numero_parada == model.getCurrentStop()?.numero_parada) {
           hue = BitmapDescriptor.hueGreen;
         } else if (stop.numero_parada == model.getNextStop()?.numero_parada) {
@@ -1899,8 +1943,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         }
       }
 
+      // "My Stop" (Red) always takes precedence over everything
       if (isMyStop) {
-        hue = BitmapDescriptor.hueRed; // Red as requested for "where I am / my stop"
+        hue = BitmapDescriptor.hueRed; 
       }
 
       markers.add(Marker(
@@ -1930,35 +1975,28 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     return markers;
   }
 
-  Set<Polyline> _buildMapPolylines(SchedulesViewModel model) {
-    if (model.stops.isEmpty) return {};
+  Set<Polyline> _buildMapPolylines(HomeViewModel homeViewModel, SchedulesViewModel model) {
+    List<LatLng> points = [];
+    bool isOffline = homeViewModel.isOfflineMode;
 
-    // Use filtered points if showFilteredStops is active
-    final List<LatLng> points;
-    if (model.showFilteredStops && model.unit != null) {
-      final List<StopData> stopsToShow = [
-        if (model.getPreviousStop() != null) model.getPreviousStop()!,
-        if (model.getCurrentStop() != null) model.getCurrentStop()!,
-        if (model.getNextStop() != null) model.getNextStop()!,
-      ];
-      points = stopsToShow.map((s) => LatLng(s.latitud, s.longitud)).toList();
+    if (isOffline) {
+      points = homeViewModel.qrRoute!.paradas.map((s) => LatLng(s.latitud, s.longitud)).toList();
     } else {
-      // Use high-fidelity road points if available (for Special Companies), 
-      // otherwise fallback to straight lines between stops.
+      if (model.stops.isEmpty) return {};
       points = model.roadPoints.isNotEmpty 
-          ? model.roadPoints 
-          : model.stops.map((s) => LatLng(s.latitud, s.longitud)).toList();
+            ? model.roadPoints 
+            : model.stops.map((s) => LatLng(s.latitud, s.longitud)).toList();
     }
 
     if (points.length < 2) return {};
 
     return {
       Polyline(
-        polylineId: PolylineId(model.showFilteredStops ? 'route_line_filtered' : 'route_line'),
+        polylineId: PolylineId(isOffline ? 'qr_offline_route' : (model.showFilteredStops ? 'route_line_filtered' : 'route_line')),
         points: points,
-        color: const Color(0xFF064DC3).withOpacity(model.showFilteredStops ? 0.8 : 0.6),
-        width: model.showFilteredStops ? 6 : 5,
-        geodesic: true,
+        color: const Color(0xFF064DC3).withOpacity(isOffline ? 1.0 : (model.showFilteredStops ? 0.8 : 0.6)),
+        width: isOffline ? 6 : (model.showFilteredStops ? 6 : 5),
+        zIndex: isOffline ? 10 : 1,
         jointType: JointType.round,
         startCap: Cap.roundCap,
         endCap: Cap.roundCap,
