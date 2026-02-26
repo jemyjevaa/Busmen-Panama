@@ -16,14 +16,13 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
   final MobileScannerController controller = MobileScannerController(
     facing: CameraFacing.back,
     torchEnabled: false,
-    autoStart: false,
+    autoStart: true,
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _isScanning = true;
   String? _lastError;
   bool _hasPermission = false;
   bool _isCheckingPermission = true;
-  Future<void>? _startingFuture;
 
   @override
   void initState() {
@@ -37,7 +36,14 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
         if (mounted) setState(() => _lastError = 'Escáner listo. Enfoca el QR.');
       }
       if (controller.value.error != null) {
-        debugPrint('QRScanner: Controller error: ${controller.value.error}');
+        final error = controller.value.error!;
+        // Silence "already started" as it's a common harmless Android race condition
+        if (error.errorCode == MobileScannerErrorCode.genericError && 
+            (error.errorDetails?.message?.contains('already started') ?? false)) {
+          debugPrint('QRScanner: Ignored harmless "already started" error');
+          return;
+        }
+        debugPrint('QRScanner: Controller error: ${error.errorCode} - ${error.errorDetails?.message}');
       }
     });
 
@@ -63,14 +69,10 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
           _hasPermission = status.isGranted;
           _isCheckingPermission = false;
           if (!status.isGranted) {
-            _lastError = 'Permiso de cámara denegado o expirado (Status: ${status.name})';
+            _lastError = 'Permiso de cámara denegado (Status: ${status.name})';
           }
         });
-        if (status.isGranted) {
-          debugPrint('QRScanner: Permission granted, initiating safe start...');
-          // Give it a tiny bit of time for the widget to be ready
-          Future.delayed(const Duration(milliseconds: 300), () => _safeStart());
-        }
+        // With autoStart: true, the widget will start itself once _hasPermission is true
       }
     } catch (e) {
       debugPrint('QRScanner: Error checking permission: $e');
@@ -84,37 +86,24 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
   }
 
   Future<void> _safeStart() async {
-    if (_startingFuture != null) {
-      debugPrint('QRScanner: Already starting, waiting for previous future...');
-      return _startingFuture;
-    }
-
-    if (!controller.value.isRunning) {
-      debugPrint('QRScanner: Starting controller...');
-      _startingFuture = controller.start().then((_) {
-        debugPrint('QRScanner: Controller started successfully');
-        _startingFuture = null;
-      }).catchError((e) {
-        debugPrint('QRScanner: Error in safeStart: $e');
-        _startingFuture = null;
-      });
-      return _startingFuture;
-    } else {
-      debugPrint('QRScanner: Controller is already running.');
+    try {
+      if (!controller.value.isRunning) {
+        debugPrint('QRScanner: Starting controller...');
+        await controller.start();
+      }
+    } catch (e) {
+      debugPrint('QRScanner: Error in safeStart: $e');
     }
   }
 
   Future<void> _safeStop() async {
-    if (_startingFuture != null) {
-      await _startingFuture;
-    }
-    if (controller.value.isRunning) {
-      debugPrint('QRScanner: Stopping controller...');
-      try {
+    try {
+      if (controller.value.isRunning) {
+        debugPrint('QRScanner: Stopping controller...');
         await controller.stop();
-      } catch (e) {
-        debugPrint('QRScanner: Error in safeStop: $e');
       }
+    } catch (e) {
+      debugPrint('QRScanner: Error in safeStop: $e');
     }
   }
 
@@ -170,7 +159,6 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
                   children: [
                     MobileScanner(
             controller: controller,
-            scanWindow: Rect.fromLTWH(0, 0, 320, 320), // Focus on the larger center area
             placeholderBuilder: (context, child) {
               return const Center(
                 child: Column(
@@ -184,6 +172,12 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
               );
             },
             errorBuilder: (context, error, child) {
+              // Silence "already started" error screen
+              if (error.errorCode == MobileScannerErrorCode.genericError && 
+                  (error.errorDetails?.message?.contains('already started') ?? false)) {
+                return const SizedBox.shrink(); // Show nothing, just let it run
+              }
+              
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
