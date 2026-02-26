@@ -1,3 +1,4 @@
+import 'package:busmen_panama/ui/views/qr_scanner_view.dart';
 import 'package:busmen_panama/ui/widget/recovery_password_button.dart';
 import 'package:busmen_panama/ui/widget/registre_button.dart';
 import 'package:flutter/material.dart';
@@ -249,33 +250,30 @@ class _LoginViewState extends State<LoginView> {
                                       ),
                                     ),
                                   ),
-                                  if ( CacheUserSession().isCopaair ) ...[
-                                    // Company-specific Actions
-                                    if (viewModel.identifiedCompany == 1) ...[
-                                      const SizedBox(height: 15),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton.icon(
-                                          onPressed: () {
-                                            // QR logic placeholder
-                                          },
-                                          icon: const Icon(Icons.qr_code_scanner),
-                                          label: Text(
-                                            localization.getString('scan_qr'),
-                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.white,
-                                            foregroundColor: const Color(0xFF064DC3),
-                                            side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                            elevation: 0,
-                                          ),
-                                        ),
+                                  const SizedBox(height: 15),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(builder: (context) => const QRScannerView()),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.qr_code_scanner),
+                                      label: Text(
+                                        localization.getString('scan_qr'),
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
                                       ),
-                                    ],
-                                  ],
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.white,
+                                        foregroundColor: const Color(0xFF064DC3),
+                                        side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                        elevation: 0,
+                                      ),
+                                    ),
+                                  ),
                                   const SizedBox(height: 20),
                                   RecoveryButton(
                                     viewModel: viewModel,
