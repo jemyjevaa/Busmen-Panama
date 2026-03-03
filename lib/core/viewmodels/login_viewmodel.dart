@@ -407,6 +407,29 @@ class LoginViewModel extends ChangeNotifier {
 
   // endregion RECOVERY PWD
 
+  void reset() {
+    userController.clear();
+    passwordController.clear();
+    recoveryUserController.clear();
+    recoveryEmailController.clear();
+    registerNewCompanyController.clear();
+    registerNewUserNameController.clear();
+    registerNewEmailController.clear();
+    registerNewUserController.clear();
+    
+    isOtherDomine = false;
+    loadingLogIn = false;
+    loadingCreateUser = false;
+    loadingRecoveryPwd = false;
+    _isPasswordObscured = true;
+    _obscurePassword = true;
+    
+    // Clear temporary cache flags if necessary
+    CacheUserSession().isCopaair = false;
+    
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     userController.dispose();

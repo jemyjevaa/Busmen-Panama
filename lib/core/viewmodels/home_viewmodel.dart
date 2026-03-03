@@ -3,6 +3,12 @@ import 'package:busmen_panama/core/services/cache_user_session.dart';
 import 'package:busmen_panama/core/services/socket_service.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:busmen_panama/core/viewmodels/login_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/schedules_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -367,9 +373,15 @@ class HomeViewModel extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 1));
 
     if (context.mounted) {
-      _mapController = null; // Important: Clear controller
-      _session.isLogin = false;
-      _session.userSide = 1; // Reset side
+      // Reset all ViewModels to clear state
+      context.read<LoginViewModel>().reset();
+      context.read<HomeViewModel>().reset();
+      context.read<SchedulesViewModel>().reset();
+      context.read<NotificationsViewModel>().reset();
+      context.read<LostFoundViewModel>().reset();
+      context.read<PasswordViewModel>().reset();
+
+      _session.clear();
       
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginView()),
@@ -379,9 +391,15 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   Future<void> logout(BuildContext context) async {
-    _mapController = null; // Important: Clear controller
-    _session.isLogin = false;
-    _session.userSide = 1; // Reset side preference
+    // Reset all ViewModels to clear state
+    context.read<LoginViewModel>().reset();
+    context.read<HomeViewModel>().reset();
+    context.read<SchedulesViewModel>().reset();
+    context.read<NotificationsViewModel>().reset();
+    context.read<LostFoundViewModel>().reset();
+    context.read<PasswordViewModel>().reset();
+
+    _session.clear();
     
     // OneSignal cleanup
     //SocketService().removeOneSignalTags();
@@ -392,6 +410,14 @@ class HomeViewModel extends ChangeNotifier {
         (route) => false,
       );
     }
+  }
+
+  void reset() {
+    _mapController = null;
+    _qrRoute = null;
+    _currentPosition = null;
+    _isLoadingLocation = true;
+    notifyListeners();
   }
 
   @override

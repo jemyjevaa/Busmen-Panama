@@ -158,6 +158,18 @@ class LostFoundViewModel extends ChangeNotifier {
     }
   }
 
+  void reset() {
+    nameController.clear();
+    phoneController.clear();
+    descriptionController.clear();
+    _selectedRouteModel = null;
+    _availableRoutesModel = [];
+    _searchQuery = "";
+    _selectedDate = null;
+    _isSubmitting = false;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     nameController.dispose();

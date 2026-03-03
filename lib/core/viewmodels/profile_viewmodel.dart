@@ -1,6 +1,14 @@
 import 'package:busmen_panama/core/services/cache_user_session.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/login_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/schedules_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
+import 'package:busmen_panama/ui/views/login_view.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final _session = CacheUserSession();
@@ -40,12 +48,24 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     if (context.mounted) {
+      // Reset all ViewModels to clear state
+      context.read<LoginViewModel>().reset();
+      context.read<HomeViewModel>().reset();
+      context.read<SchedulesViewModel>().reset();
+      context.read<NotificationsViewModel>().reset();
+      context.read<LostFoundViewModel>().reset();
+      context.read<PasswordViewModel>().reset();
+
+      _session.clear();
       _session.isLogin = false; // Log out on delete for mock
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Usuario eliminado correctamente')),
       );
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginView()),
+        (route) => false,
+      );
     }
   }
 }

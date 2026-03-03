@@ -149,6 +149,13 @@ class PasswordViewModel extends ChangeNotifier {
     );
   }
 
+  void reset() {
+    newPasswordController.clear();
+    _isSubmitting = false;
+    _obscureText = true;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     newPasswordController.dispose();
