@@ -11,6 +11,9 @@ import 'package:busmen_panama/ui/views/lost_found_view.dart';
 import 'package:busmen_panama/ui/views/password_view.dart';
 import 'package:busmen_panama/ui/views/notification_view.dart';
 import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/login_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
 import 'package:busmen_panama/core/services/models/info_schedules_model.dart'; // Added for RouteData
 import 'package:busmen_panama/core/services/models/qr_route_model.dart';
 
@@ -39,10 +42,17 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     // Initialize location access
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final viewModel = context.read<HomeViewModel>();
+      final schedulesViewModel = context.read<SchedulesViewModel>();
+      final notificationsViewModel = context.read<NotificationsViewModel>();
+
       if (widget.qrRoute != null) {
         viewModel.setQRRoute(widget.qrRoute!);
       } else {
         viewModel.getUserLocation();
+        
+        // Ensure data is refreshed for the current company/user session
+        schedulesViewModel.fetchRoutes();
+        notificationsViewModel.checkNewNotifications();
       }
     });
   }
@@ -899,6 +909,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Widget _buildLogoutItem(BuildContext context, LanguageService localization) {
     return InkWell(
       onTap: () {
+        // Reset all ViewModels to clear state
+        context.read<LoginViewModel>().reset();
+        context.read<HomeViewModel>().reset();
+        context.read<SchedulesViewModel>().reset();
+        context.read<NotificationsViewModel>().reset();
+        context.read<LostFoundViewModel>().reset();
+        context.read<PasswordViewModel>().reset();
+        
         CacheUserSession().clear();
         SocketService().removeOneSignalTags();
         Navigator.pushReplacement(

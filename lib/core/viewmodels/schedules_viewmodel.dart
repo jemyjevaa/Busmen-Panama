@@ -755,6 +755,28 @@ class SchedulesViewModel extends ChangeNotifier {
 
   bool isRouteActiveNow(RouteData route) => _isRouteInTime(route);
 
+  void reset() {
+    _stopSocketTracking();
+    _roadPoints = [];
+    _routes = [];
+    _stops = [];
+    _unit = null;
+    _selectedRoute = null;
+    _filterOption = 'filter_all';
+    _searchQuery = '';
+    _bulletins = [];
+    _regulations = [];
+    _manuals = [];
+    _isLoadingFlyers = false;
+    _selectedUserStop = null;
+    _currentUnitStopIndex = -1;
+    _showFilteredStops = false;
+    _recentRoutes = [];
+    _isLoadingRoutes = false;
+    _isLoadingStops = false;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _stopSocketTracking();

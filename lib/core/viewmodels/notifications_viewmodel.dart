@@ -38,6 +38,15 @@ class NotificationsViewModel extends ChangeNotifier {
     });
   }
 
+  void reset() {
+    _refreshTimer?.cancel();
+    _notifications = [];
+    _isLoading = false;
+    _hasUnread = false;
+    _pendingFlyerType = null;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _refreshTimer?.cancel();
