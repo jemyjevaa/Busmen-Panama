@@ -12,53 +12,57 @@ Widget buildTextField({
   Function(String)? onChanged,
   String? Function(String?)? validator,
 }) {
-  return Container(
+  return Builder(
+    builder: (context) {
+      final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
+
+      return Container(
     margin: const EdgeInsets.only(bottom: 5),
     child: TextFormField(
       controller: controller,
       obscureText: isPassword ? obscureText : false,
       onChanged: onChanged,
       validator: validator,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: theme.textTheme.bodyLarge?.color),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(
-          color: Colors.grey[400],
+          color: isDark ? Colors.white.withOpacity(0.34) : Colors.grey[400],
           fontSize: 14,
           fontWeight: FontWeight.w400,
         ),
-        prefixIcon: Icon(icon, color: const Color(0xFF064DC3), size: 20),
+        prefixIcon: Icon(icon, color: isDark ? theme.colorScheme.primary : const Color(0xFF064DC3), size: 20),
         suffixIcon: isPassword 
           ? IconButton(
               icon: Icon(
                 obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                color: const Color(0xFF064DC3),
+                color: isDark ? theme.colorScheme.primary : const Color(0xFF064DC3),
                 size: 20,
               ),
               onPressed: onToggleVisibility,
             )
           : (isSuccess ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null),
         filled: true,
-// ...
-        fillColor: Colors.grey[50],
+        fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-              color: isSuccess ? Colors.green : Colors.grey[200]!,
+              color: isSuccess ? Colors.green : (isDark ? Colors.white10 : Colors.grey[200]!),
               width: 1.5
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-              color: isSuccess ? Colors.green : Colors.grey[200]!,
+              color: isSuccess ? Colors.green : (isDark ? Colors.white10 : Colors.grey[200]!),
               width: 1.5
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-              color: Color(0xFF064DC3),
+          borderSide: BorderSide(
+              color: isDark ? theme.colorScheme.primary : const Color(0xFF064DC3),
               width: 1.5
           ),
         ),
@@ -72,5 +76,7 @@ Widget buildTextField({
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     ),
+  );
+    }
   );
 }

@@ -27,16 +27,20 @@ class _NotificationViewState extends State<NotificationView> {
     final localization = context.watch<LanguageService>();
     final primaryColor = const Color(0xFF064DC3);
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.white,
-              primaryColor.withOpacity(0.05),
-              primaryColor.withOpacity(0.1),
+              theme.scaffoldBackgroundColor,
+              primaryColor.withOpacity(isDark ? 0.05 : 0.05),
+              primaryColor.withOpacity(isDark ? 0.1 : 0.1),
             ],
           ),
         ),
@@ -126,15 +130,15 @@ class _NotificationViewState extends State<NotificationView> {
             Container(
               width: 45,
               height: 45,
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.1) : Colors.white,
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Text(
                   "$count",
                   style: TextStyle(
-                    color: primaryColor,
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white : primaryColor,
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
                   ),
@@ -173,12 +177,12 @@ class _NotificationViewState extends State<NotificationView> {
           const SizedBox(height: 24),
           Text(
             localization.getString('no_notifications'),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
           ),
           const SizedBox(height: 8),
           Text(
             localization.getString('notify_msg'),
-            style: TextStyle(fontSize: 14, color: Colors.blueGrey[300]),
+            style: TextStyle(fontSize: 14, color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.blueGrey[300]),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
@@ -206,11 +210,11 @@ class _NotificationViewState extends State<NotificationView> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -253,14 +257,14 @@ class _NotificationViewState extends State<NotificationView> {
                   const SizedBox(height: 4),
                   Text(
                     notification.titulo,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF1E293B)),
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     notification.mensaje,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.3),
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : const Color(0xFF64748B), height: 1.3),
                   ),
                 ],
               ),
@@ -307,9 +311,9 @@ class _NotificationViewState extends State<NotificationView> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
             topRight: Radius.circular(30),
           ),
@@ -344,7 +348,7 @@ class _NotificationViewState extends State<NotificationView> {
                     const SizedBox(height: 8),
                     Text(
                       notification.titulo,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Theme.of(context).textTheme.bodyLarge?.color),
                     ),
                     const SizedBox(height: 10),
                     Text(

@@ -21,8 +21,11 @@ class LostFoundView extends StatelessWidget {
       });
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           localization.getString('lost_found').toUpperCase(),
@@ -49,11 +52,11 @@ class LostFoundView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF064DC3).withOpacity(0.06),
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -77,7 +80,7 @@ class LostFoundView extends StatelessWidget {
                       children: [
                         Text(
                           localization.getString('report_lost_object'),
-                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: theme.textTheme.bodyLarge?.color),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -94,16 +97,18 @@ class LostFoundView extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Form Section: User Info
-            _buildSectionTitle(localization.getString('contact_info'), Icons.person_rounded),
+            _buildSectionTitle(context, localization.getString('contact_info'), Icons.person_rounded),
             const SizedBox(height: 16),
-            _buildFormCard([
+            _buildFormCard(context, [
               _buildModernTextField(
+                context,
                 viewModel.nameController, 
                 localization.getString('user_name_hint'), 
                 Icons.person_pin_rounded
               ),
               const SizedBox(height: 16),
               _buildModernTextField(
+                context,
                 viewModel.phoneController, 
                 localization.getString('phone_hint'), 
                 Icons.phone_iphone_rounded,
@@ -114,9 +119,9 @@ class LostFoundView extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Form Section: Incident Details
-            _buildSectionTitle(localization.getString('incident_details'), Icons.bus_alert_rounded),
+            _buildSectionTitle(context, localization.getString('incident_details'), Icons.bus_alert_rounded),
             const SizedBox(height: 16),
-            _buildFormCard([
+            _buildFormCard(context, [
               // Modern Searchable Picker
               InkWell(
                 onTap: () => _showRoutePicker(context, viewModel, localization),
@@ -124,7 +129,7 @@ class LostFoundView extends StatelessWidget {
                   height: 58,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -137,7 +142,7 @@ class LostFoundView extends StatelessWidget {
                               ? localization.getString('route_hint')
                               : "${viewModel.selectedRouteModel!.nombre}${viewModel.selectedRouteModel!.hora_inicio != null ? ' (${viewModel.selectedRouteModel!.hora_inicio} - ${viewModel.selectedRouteModel!.hora_fin})' : ''}",
                           style: TextStyle(
-                            color: viewModel.selectedRouteModel == null ? Colors.blueGrey[400] : const Color(0xFF334155),
+                            color: viewModel.selectedRouteModel == null ? (isDark ? Colors.white.withOpacity(0.34) : Colors.blueGrey[400]) : theme.textTheme.bodyLarge?.color,
                             fontSize: 14,
                             fontWeight: viewModel.selectedRouteModel == null ? FontWeight.normal : FontWeight.w600,
                           ),
@@ -161,12 +166,18 @@ class LostFoundView extends StatelessWidget {
                     builder: (context, child) {
                       return Theme(
                         data: Theme.of(context).copyWith(
-                          colorScheme: const ColorScheme.light(
-                            primary: Color(0xFF064DC3),
-                            onPrimary: Colors.white,
-                            onSurface: Color(0xFF1E293B),
-                          ),
-                          dialogBackgroundColor: Colors.white,
+                          colorScheme: isDark 
+                              ? const ColorScheme.dark(
+                                  primary: Color(0xFF064DC3),
+                                  onPrimary: Colors.white,
+                                  surface: Color(0xFF1E1E1E),
+                                )
+                              : const ColorScheme.light(
+                                  primary: Color(0xFF064DC3),
+                                  onPrimary: Colors.white,
+                                  onSurface: Color(0xFF1E293B),
+                                ),
+                          dialogBackgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                         ),
                         child: child!,
                       );
@@ -178,7 +189,7 @@ class LostFoundView extends StatelessWidget {
                   height: 58,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -190,7 +201,7 @@ class LostFoundView extends StatelessWidget {
                             ? localization.getString('date_hint')
                             : DateFormat('dd/MM/yyyy').format(viewModel.selectedDate!),
                         style: TextStyle(
-                          color: viewModel.selectedDate == null ? Colors.blueGrey[400] : const Color(0xFF334155),
+                          color: viewModel.selectedDate == null ? (isDark ? Colors.white.withOpacity(0.34) : Colors.blueGrey[400]) : theme.textTheme.bodyLarge?.color,
                           fontWeight: viewModel.selectedDate == null ? FontWeight.normal : FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -206,16 +217,16 @@ class LostFoundView extends StatelessWidget {
             const SizedBox(height: 32),
             
             // Description
-            _buildSectionTitle(localization.getString('object_description'), Icons.description_rounded),
+            _buildSectionTitle(context, localization.getString('object_description'), Icons.description_rounded),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF064DC3).withOpacity(0.04),
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
@@ -224,10 +235,10 @@ class LostFoundView extends StatelessWidget {
               child: TextField(
                 controller: viewModel.descriptionController,
                 maxLines: 4,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF334155)),
+                style: TextStyle(fontSize: 14, color: theme.textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
                   hintText: localization.getString('description_hint'),
-                  hintStyle: TextStyle(color: Colors.blueGrey[200]),
+                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.blueGrey[200]),
                   border: InputBorder.none,
                 ),
               ),
@@ -288,31 +299,31 @@ class LostFoundView extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
+  Widget _buildSectionTitle(BuildContext context, String title, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF475569)),
+          Icon(icon, size: 18, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF475569)),
           const SizedBox(width: 10),
           Text(
             title.toUpperCase(),
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF475569), letterSpacing: 1.2),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF475569), letterSpacing: 1.2),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFormCard(List<Widget> children) {
+  Widget _buildFormCard(BuildContext context, List<Widget> children) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF064DC3).withOpacity(0.04),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -322,22 +333,23 @@ class LostFoundView extends StatelessWidget {
     );
   }
 
-  Widget _buildModernTextField(TextEditingController controller, String hint, IconData icon, {bool isPhone = false}) {
+  Widget _buildModernTextField(BuildContext context, TextEditingController controller, String hint, IconData icon, {bool isPhone = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 58,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: isDark ? Colors.white.withOpacity(0.12) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(16),
       ),
       child: TextField(
         controller: controller,
         keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
-        style: const TextStyle(fontSize: 14, color: Color(0xFF334155)),
+        style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodyLarge?.color),
         decoration: InputDecoration(
           icon: Icon(icon, color: Colors.blueGrey[300], size: 20),
           hintText: hint,
-          hintStyle: TextStyle(color: Colors.blueGrey[400], fontSize: 14),
+          hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.blueGrey[400], fontSize: 14),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 18),
         ),
@@ -355,13 +367,15 @@ class LostFoundView extends StatelessWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final theme = Theme.of(context);
+            final isDark = theme.brightness == Brightness.dark;
             final groupedRoutes = viewModel.groupedFilteredRoutes;
             
             return Container(
               height: MediaQuery.of(context).size.height * 0.85,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: Column(
                 children: [
@@ -371,7 +385,7 @@ class LostFoundView extends StatelessWidget {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: isDark ? Colors.white24 : Colors.grey[300],
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -385,16 +399,16 @@ class LostFoundView extends StatelessWidget {
                       children: [
                         Text(
                           localization.getString('route_hint').toUpperCase(),
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1E293B), letterSpacing: 0.5),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: theme.textTheme.bodyLarge?.color, letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: isDark ? Colors.white.withOpacity(0.12) : Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+                              BoxShadow(color: Colors.black.withOpacity(isDark ? 0.3 : 0.04), blurRadius: 10, offset: const Offset(0, 4)),
                             ],
                           ),
                           child: TextField(
@@ -435,7 +449,7 @@ class LostFoundView extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                                 child: Text(
                                   groupName,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF064DC3), letterSpacing: 1),
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.primary : const Color(0xFF064DC3), letterSpacing: 1),
                                 ),
                               ),
                               // Routes in group
@@ -455,7 +469,7 @@ class LostFoundView extends StatelessWidget {
                                     child: Container(
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
-                                        color: isSelected ? const Color(0xFF064DC3).withOpacity(0.05) : Colors.white,
+                                        color: isSelected ? const Color(0xFF064DC3).withOpacity(0.05) : theme.cardColor,
                                         borderRadius: BorderRadius.circular(16),
                                         border: Border.all(
                                           color: isSelected ? const Color(0xFF064DC3) : Colors.transparent,
@@ -483,7 +497,7 @@ class LostFoundView extends StatelessWidget {
                                               children: [
                                                 Text(
                                                   route.tramo,
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
+                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.textTheme.bodyLarge?.color),
                                                 ),
                                                 Text(
                                                   schedule,

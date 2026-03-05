@@ -13,8 +13,11 @@ class PasswordView extends StatelessWidget {
     final viewModel = context.watch<PasswordViewModel>();
     final localization = context.watch<LanguageService>();
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           localization.getString('password').toUpperCase(),
@@ -44,14 +47,14 @@ class PasswordView extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF064DC3).withOpacity(0.08),
+                  color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFF064DC3).withOpacity(0.08),
                   borderRadius: BorderRadius.circular(40),
                 ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    Icon(Icons.shield_rounded, size: 70, color: const Color(0xFF064DC3).withOpacity(0.2)),
-                    const Icon(Icons.lock_person_rounded, size: 40, color: Color(0xFF064DC3)),
+                    Icon(Icons.shield_rounded, size: 70, color: isDark ? Colors.white.withOpacity(0.1) : const Color(0xFF064DC3).withOpacity(0.2)),
+                    Icon(Icons.lock_person_rounded, size: 40, color: isDark ? theme.colorScheme.primary : const Color(0xFF064DC3)),
                   ],
                 ),
               ),
@@ -62,11 +65,11 @@ class PasswordView extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 48),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(32),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF064DC3).withOpacity(0.08),
+                      color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
                       blurRadius: 30,
                       offset: const Offset(0, 15),
                     ),
@@ -76,21 +79,21 @@ class PasswordView extends StatelessWidget {
                   children: [
                     Text(
                       localization.getString('change_password'),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: theme.textTheme.bodyLarge?.color),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       localization.getString('password_msg'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.blueGrey[400], height: 1.5),
+                      style: TextStyle(fontSize: 14, color: isDark ? Colors.white38 : Colors.blueGrey[400], height: 1.5),
                     ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF064DC3).withOpacity(0.05),
+                        color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFF064DC3).withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF064DC3).withOpacity(0.1)),
+                        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFF064DC3).withOpacity(0.1)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -102,7 +105,7 @@ class PasswordView extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1E293B).withOpacity(0.7),
+                              color: isDark ? Colors.white70 : const Color(0xFF1E293B).withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -114,13 +117,13 @@ class PasswordView extends StatelessWidget {
                     Container(
                       height: 60,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(18),
                       ),
                       child: TextField(
                         controller: viewModel.newPasswordController,
                         obscureText: viewModel.obscureText,
-                        style: const TextStyle(fontSize: 16, color: Color(0xFF334155), fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: 16, color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           hintText: localization.getString('new_password_hint'),
                           hintStyle: TextStyle(color: Colors.blueGrey[300], fontSize: 14),

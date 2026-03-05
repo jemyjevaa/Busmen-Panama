@@ -24,14 +24,17 @@ class SchedulesView extends StatelessWidget {
       );
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           localization.getString('schedules').toUpperCase(),
           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
         ),
-        backgroundColor: const Color(0xFF064DC3),
+        backgroundColor: isDark ? const Color(0xFF053E9E) : const Color(0xFF064DC3),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -49,9 +52,9 @@ class SchedulesView extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Color(0xFF064DC3),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF053E9E) : const Color(0xFF064DC3),
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(30),
                   bottomRight: Radius.circular(30),
                 ),
@@ -152,10 +155,10 @@ class SchedulesView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(localization.getString('assigned_unit'), style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
+                                Text("${localization.getString('assigned_unit')} - ID", style: const TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.bold)),
                                 Text(
                                   viewModel.unit!.economico,
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                                 ),
                               ],
                             ),
@@ -177,11 +180,11 @@ class SchedulesView extends StatelessWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.directions_bus_outlined, size: 80, color: Colors.grey[300]),
+                            Icon(Icons.directions_bus_outlined, size: 80, color: isDark ? Colors.white10 : Colors.grey[300]),
                             const SizedBox(height: 20),
                             Text(
                               localization.getString('select_route_msg'),
-                              style: TextStyle(color: Colors.grey[500], fontSize: 16),
+                              style: TextStyle(color: isDark ? Colors.white38 : Colors.grey[500], fontSize: 16),
                             ),
                           ],
                         ),
@@ -190,7 +193,7 @@ class SchedulesView extends StatelessWidget {
                         ? Center(
                         child: Text(
                           localization.getString('no_stops_found'),
-                          style: TextStyle(color: Colors.grey[500]),
+                          style: TextStyle(color: isDark ? Colors.white38 : Colors.grey[500]),
                         ),
                           )
                         : ListView.builder(
@@ -235,11 +238,11 @@ class SchedulesView extends StatelessWidget {
                                     child: Container(
                                       margin: const EdgeInsets.only(bottom: 20),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: theme.cardColor,
                                         borderRadius: BorderRadius.circular(15),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.04),
+                                            color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
                                             blurRadius: 10,
                                             offset: const Offset(0, 4),
                                           ),
@@ -265,10 +268,10 @@ class SchedulesView extends StatelessWidget {
                                                           Expanded(
                                                             child: Text(
                                                               stop.nombre_parada,
-                                                              style: const TextStyle(
+                                                              style: TextStyle(
                                                                 fontWeight: FontWeight.bold,
                                                                 fontSize: 15,
-                                                                color: Color(0xFF064DC3),
+                                                                color: isDark ? theme.colorScheme.primary : const Color(0xFF064DC3),
                                                               ),
                                                             ),
                                                           ),
@@ -398,12 +401,15 @@ class _SimpleRoutePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF8FAFF),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
@@ -412,10 +418,10 @@ class _SimpleRoutePicker extends StatelessWidget {
         children: [
           Container(
             width: 45, height: 5,
-            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.grey[300], borderRadius: BorderRadius.circular(10)),
           ),
           const SizedBox(height: 20),
-          Text(localization.getString('select_a_route').toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF064DC3))),
+          Text(localization.getString('select_a_route').toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? theme.colorScheme.primary : const Color(0xFF064DC3))),
           const SizedBox(height: 15),
           Expanded(
             child: ListView.builder(
@@ -457,14 +463,17 @@ class _SimpleRouteGroupState extends State<_SimpleRouteGroup> {
       return false;
     }).toList();
     
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 0,
-      color: Colors.white,
+      color: theme.brightness == Brightness.dark ? Colors.white.withOpacity(0.1) : Colors.white,
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-        leading: const Icon(Icons.alt_route_rounded, color: Color(0xFF064DC3)),
+        leading: Icon(Icons.alt_route_rounded, color: isDark ? theme.colorScheme.primary : const Color(0xFF064DC3)),
         title: Text(widget.groupName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         children: [
            Padding(
@@ -508,13 +517,15 @@ class _SimpleRouteGroupState extends State<_SimpleRouteGroup> {
   }
 
   Widget _buildChip(String key, String label) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isS = _selectedTramo == key;
     return ChoiceChip(
-      label: Text(label, style: TextStyle(fontSize: 11, color: isS ? Colors.white : Colors.black87)),
+      label: Text(label, style: TextStyle(fontSize: 11, color: isS ? Colors.white : (isDark ? Colors.white70 : Colors.black87))),
       selected: isS,
       onSelected: (s) => setState(() => _selectedTramo = s ? key : null),
       selectedColor: const Color(0xFF064DC3),
-      backgroundColor: Colors.grey[100],
+      backgroundColor: isDark ? Colors.white12 : Colors.grey[100],
       showCheckmark: false,
     );
   }

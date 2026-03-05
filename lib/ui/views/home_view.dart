@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -45,6 +48,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       final schedulesViewModel = context.read<SchedulesViewModel>();
       final notificationsViewModel = context.read<NotificationsViewModel>();
 
+      // Preload dark map style JSON and set initial dark mode flag
+      final brightness = View.of(context).platformDispatcher.platformBrightness;
+      viewModel.updateTheme(brightness);
+      viewModel.preloadMapStyle().then((_) {
+        // After preloading, re-apply the theme so mapStyle getter is populated in time
+        viewModel.updateTheme(brightness);
+      });
+
       if (widget.qrRoute != null) {
         viewModel.setQRRoute(widget.qrRoute!);
       } else {
@@ -64,6 +75,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangePlatformBrightness() {
+    super.didChangePlatformBrightness();
+    if (mounted) {
+      final brightness = View.of(context).platformDispatcher.platformBrightness;
+      context.read<HomeViewModel>().updateTheme(brightness);
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       final schedulesViewModel = context.read<SchedulesViewModel>();
@@ -76,14 +96,68 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
 
   Future<void> _loadCustomMarkers() async {
     try {
-      _busIcon = await BitmapDescriptor.fromAssetImage(
-        const ImageConfiguration(size: Size(48, 48)),
-        'assets/icons/bus_motion.png',
+      // Create a combined icon with a directional beam
+      _busIcon = await _getDirectionalBusIcon(
+        'assets/icons/bus_motion4.png', // Switched to PNG for compatibility with BitmapDescriptor
+        200.0, // Increased from 100.0
       );
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Error loading bus icon: $e');
+      // Fallback
+      _busIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(150, 150)),
+        'assets/icons/bus_motion4.png',
+      );
+      if (mounted) setState(() {});
     }
+  }
+
+  Future<BitmapDescriptor> _getDirectionalBusIcon(String assetPath, double size) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    final double canvasSize = size * 2.5; // Larger canvas to contain the beam
+    
+    // 1. Draw the "Beam" (Haz de luz / Cono de dirección)
+    final Paint beamPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(canvasSize / 2, canvasSize / 2),
+        Offset(canvasSize / 2, 0),
+        [
+          const Color(0xFFFFD700).withOpacity(0.5), // Yellow (Gold) Beam
+          const Color(0xFFFFD700).withOpacity(0.01),
+        ],
+      );
+
+    final Path beamPath = Path()
+      ..moveTo(canvasSize / 2, canvasSize / 2)
+      ..lineTo(canvasSize / 2 - (canvasSize / 3.5), 0)
+      ..lineTo(canvasSize / 2 + (canvasSize / 3.5), 0)
+      ..close();
+
+    canvas.drawPath(beamPath, beamPaint);
+
+    // 2. Load and Draw the Bus Image
+    final ByteData data = await rootBundle.load(assetPath);
+    final ui.Codec codec = await ui.instantiateImageCodec(
+      data.buffer.asUint8List(), 
+      targetWidth: size.toInt(),
+    );
+    final ui.FrameInfo fi = await codec.getNextFrame();
+    
+    // Draw the bus image centered in the canvas
+    canvas.drawImage(
+      fi.image, 
+      Offset(canvasSize / 2 - size / 2, canvasSize / 2 - size / 2), 
+      Paint()
+    );
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(canvasSize.toInt(), canvasSize.toInt());
+    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    
+    if (byteData == null) return BitmapDescriptor.defaultMarker;
+    
+    return BitmapDescriptor.fromBytes(byteData.buffer.asUint8List());
   }
 
   @override
@@ -115,8 +189,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               builder: (context) => Stack(
                 children: [
                   GoogleMap(
-                    key: ValueKey(viewModel.isOfflineMode ? 'offline_map_${viewModel.qrRoute?.metadata.idFrecuencia}' : 'online_map'),
+                    key: ValueKey('${viewModel.isOfflineMode ? 'offline' : 'online'}_map'),
                     mapType: viewModel.currentMapType,
+                    style: viewModel.mapStyle,
                     initialCameraPosition: CameraPosition(
                       target: () {
                         // 0. Check QR Route (Priority)
@@ -145,7 +220,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                       zoom: 15,
                     ),
                     onMapCreated: (controller) {
-                      viewModel.onMapCreated(controller);
+                      viewModel.onMapCreated(controller, context);
                       if (viewModel.isOfflineMode) {
                         viewModel.centerOnQRRoute();
                       }
@@ -287,16 +362,18 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                       height: 75,
                                       padding: const EdgeInsets.symmetric(horizontal: 18),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20), // Less "pill", more search-bar like
+                                        color: Theme.of(context).cardColor,
+                                        borderRadius: BorderRadius.circular(20),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.12),
+                                            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.12),
                                             blurRadius: 15,
                                             offset: const Offset(0, 8),
                                           ),
                                         ],
-                                        border: Border.all(color: Colors.grey[100]!),
+                                        border: Theme.of(context).brightness == Brightness.dark 
+                                            ? Border.all(color: Colors.white10) 
+                                            : Border.all(color: Colors.grey[100]!),
                                       ),
                                       child: Row(
                                         children: [
@@ -312,8 +389,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                                         viewModel.isOfflineMode 
                                                           ? viewModel.qrRoute!.frecuencia.ruta.nombre 
                                                           : (selectedRoute?.nombre ?? localization.getString('route_not_selected')),
-                                                        style: const TextStyle(
-                                                          color: Color(0xFF333333),
+                                                        style: TextStyle(
+                                                          color: Theme.of(context).textTheme.bodyLarge?.color,
                                                           fontWeight: FontWeight.w900,
                                                           fontSize: 15,
                                                           letterSpacing: -0.2,
@@ -493,11 +570,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.15),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -505,10 +582,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           ),
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF333333),
+              color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.8),
             ),
           ),
         ),
@@ -522,7 +599,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             width: 45, // Slightly smaller than main button (55)
             height: 45,
             decoration: BoxDecoration(
-              color: isSelected ? primaryBlue : Colors.white,
+              color: isSelected ? primaryBlue : Theme.of(context).cardColor,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -546,7 +623,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   Widget _buildDrawer(BuildContext context, HomeViewModel viewModel, LanguageService localization) {
 
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(topRight: Radius.circular(20), bottomRight: Radius.circular(20)),
       ),
@@ -715,17 +792,19 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF064DC3).withOpacity(0.1),
+                        color: (Theme.of(context).brightness == Brightness.dark 
+                            ? Theme.of(context).colorScheme.primary 
+                            : const Color(0xFF064DC3)).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.info_outline, color: Color(0xFF064DC3), size: 20),
+                      child: Icon(Icons.info_outline, color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.primary : const Color(0xFF064DC3), size: 20),
                     ),
                     title: Text(
                       localization.getString('information'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF333333),
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -859,8 +938,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     bool isDestructive = false,
     Widget? trailing,
   }) {
-    final color = isDestructive ? Colors.red[700]! : const Color(0xFF064DC3);
-    final bgColor = isDestructive ? Colors.red.withOpacity(0.1) : const Color(0xFF064DC3).withOpacity(0.1);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final brandColor = isDark ? theme.colorScheme.primary : const Color(0xFF064DC3);
+    final color = isDestructive ? Colors.red[700]! : brandColor;
+    final bgColor = isDestructive ? Colors.red.withOpacity(0.1) : brandColor.withOpacity(0.1);
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 5),
@@ -879,7 +961,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: isDestructive ? Colors.red[700] : const Color(0xFF333333),
+          color: isDestructive ? Colors.red[700] : theme.textTheme.bodyLarge?.color,
           letterSpacing: 0.5,
         ),
       ),
@@ -892,13 +974,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     return ListTile(
       contentPadding: const EdgeInsets.only(left: 20, right: 10),
       visualDensity: const VisualDensity(horizontal: 0, vertical: -3),
-      leading: Icon(icon, size: 18, color: Colors.grey[600]),
+      leading: Icon(icon, size: 18, color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600]),
       title: Text(
         title,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: Colors.grey[700],
+          color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey[700],
         ),
       ),
       trailing: const Icon(Icons.arrow_forward_ios, size: 10, color: Colors.grey),
@@ -954,17 +1036,18 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   Widget _buildCircleButton({ required IconData icon, required VoidCallback onTap, }) {
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 55,
         height: 55,
         decoration: BoxDecoration(
-          color: const Color(0xFF064DC3),
+          color: theme.cardColor,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.4 : 0.2),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -972,7 +1055,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         ),
         child: Icon(
           icon,
-          color: Colors.white,
+          color: const Color(0xFF064DC3),
           size: 27,
         ),
       ),
@@ -983,6 +1066,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     required bool hasUnread,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -992,11 +1078,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             width: 55,
             height: 55,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -1018,7 +1104,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 decoration: BoxDecoration(
                   color: Colors.red,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: theme.cardColor, width: 2),
                 ),
               ),
             ),
@@ -1075,15 +1161,15 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       builder: (context) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.75,
-          decoration: const BoxDecoration(
-            color: Color(0xFFF8FAFF), // Very light blue/white background
-            borderRadius: BorderRadius.only(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12,
+                color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05),
                 blurRadius: 10,
                 spreadRadius: 2,
               )
@@ -1096,22 +1182,23 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 width: 45,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.grey[300],
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
               const SizedBox(height: 20),
               
-              // Search Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -1119,8 +1206,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   ),
                   child: TextField(
                     onChanged: (value) => schedulesViewModel.setSearchQuery(value),
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
                     decoration: InputDecoration(
                       hintText: localization.getString('search_route_hint') ?? "Buscar ruta...",
+                      hintStyle: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[400]),
                       prefixIcon: const Icon(Icons.search, color: Color(0xFF064DC3)),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -1137,7 +1226,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     return Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white.withOpacity(0.1)
+                            : Colors.grey[200],
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Row(
@@ -1236,7 +1327,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? const Color(0xFF064DC3) : Colors.transparent,
@@ -1244,7 +1335,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             )
@@ -1272,7 +1363,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
-                    color: isSelected ? const Color(0xFF064DC3) : Colors.black87,
+                    color: isSelected ? const Color(0xFF064DC3) : Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
               ),
@@ -1320,11 +1411,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               ),
               Text(
                 "${localization.getString('schedule_label')}: ${localization.getString(route.tipo_ruta.toLowerCase())}",
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600]),
               ),
               Text(
                 "${localization.getString('route_label')}: ${localization.getString(route.tramo.toLowerCase())}",
-                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                style: TextStyle(fontSize: 11, color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[500]),
               ),
             ],
           ),
@@ -1343,9 +1434,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.65,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(30),
             topRight: Radius.circular(30),
           ),
@@ -1491,12 +1582,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           final stops = model.stops;
           final isRouteActive = model.isRouteActiveNow(model.selectedRoute!);
           final myStop = model.selectedUserStop;
+          final theme = Theme.of(context);
+          final isDark = theme.brightness == Brightness.dark;
 
           return Container(
             height: MediaQuery.of(context).size.height * 0.85,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
@@ -1510,7 +1603,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: isDark ? Colors.white24 : Colors.grey[300],
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -1525,7 +1618,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF064DC3).withOpacity(0.1),
+                          color: const Color(0xFF064DC3).withOpacity(0.15),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.radar_rounded, color: Color(0xFF064DC3), size: 24),
@@ -1540,7 +1633,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                             children: [
                               Text(
                                 model.selectedRoute!.nombre,
-                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: Color(0xFF333333)), // Even bigger as requested
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900, 
+                                  fontSize: 22, 
+                                  color: theme.textTheme.bodyLarge?.color
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.visible,
                               ),
@@ -1549,14 +1646,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: (model.isRouteFinished ? Colors.red[50]! : (isRouteActive ? Colors.green[50]! : Colors.orange[50]!)),
+                                  color: (model.isRouteFinished ? Colors.red.withOpacity(0.1) : (isRouteActive ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1))),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: (model.isRouteFinished ? Colors.red[200]! : (isRouteActive ? Colors.green[200]! : Colors.orange[200]!))),
+                                  border: Border.all(color: (model.isRouteFinished ? Colors.red.withOpacity(0.3) : (isRouteActive ? Colors.green.withOpacity(0.3) : Colors.orange.withOpacity(0.3)))),
                                 ),
                                 child: Text(
                                   model.getTrackingBannerText(localization),
                                   style: TextStyle(
-                                    color: model.isRouteFinished ? Colors.red[800] : (isRouteActive ? Colors.green[800] : Colors.orange[900]), 
+                                    color: model.isRouteFinished ? Colors.red[400] : (isRouteActive ? Colors.green[400] : Colors.orange[400]), 
                                     fontSize: 14, // Larger font
                                     fontWeight: FontWeight.w900, 
                                     letterSpacing: 0.1,
@@ -1566,6 +1663,32 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                   overflow: TextOverflow.visible,
                                 ),
                               ),
+                              if (model.unit != null) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF064DC3).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFF064DC3).withOpacity(0.2)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.directions_bus_rounded, color: Color(0xFF064DC3), size: 14),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "${localization.getString('assigned_unit')}: ${model.unit!.economico}",
+                                        style: const TextStyle(
+                                          color: Color(0xFF064DC3),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1916,10 +2039,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     
     // 1. Unit Marker
     final unit = model.unit;
-    // Fix null safety: only check activity if a route is selected
-    final isActive = selectedRoute != null && model.isRouteActiveNow(selectedRoute); 
-
-    if (unit != null && isActive) {
+    // We show the unit if it exists and has a valid position, 
+    // regardless of whether the route is "active" (in-time) or not.
+    if (unit != null) {
       final lat = double.tryParse(unit.lat) ?? 0.0;
       final lon = double.tryParse(unit.lon) ?? 0.0;
       
@@ -1929,11 +2051,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             markerId: const MarkerId('unit_marker'),
             position: LatLng(lat, lon),
             icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-            rotation: 0, // Could add heading if available
+            rotation: unit.heading, // Applied calculated headind
             anchor: const Offset(0.5, 0.5),
             infoWindow: InfoWindow(
-              title: "${localization.getString('assigned_unit')}: ${unit.economico}",
-              snippet: _getUnitSnippet(model, localization),
+              title: "ID UNIDAD: ${unit.economico}",
+              snippet: localization.getString('live_tracking'),
             ),
           ),
         );
@@ -2007,12 +2129,16 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     }
 
     if (points.length < 2) return {};
-
-    return {
+    
+    final Set<Polyline> polylines = {
       Polyline(
         polylineId: PolylineId(isOffline ? 'qr_offline_route' : (model.showFilteredStops ? 'route_line_filtered' : 'route_line')),
         points: points,
-        color: const Color(0xFF064DC3).withOpacity(isOffline ? 1.0 : (model.showFilteredStops ? 0.8 : 0.6)),
+        color: const Color(0xFF064DC3).withOpacity(
+          Theme.of(context).brightness == Brightness.dark 
+            ? 0.9 
+            : (isOffline ? 1.0 : (model.showFilteredStops ? 0.8 : 0.6))
+        ),
         width: isOffline ? 6 : (model.showFilteredStops ? 6 : 5),
         zIndex: isOffline ? 10 : 1,
         jointType: JointType.round,
@@ -2020,6 +2146,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         endCap: Cap.roundCap,
       )
     };
+
+    return polylines;
   }
 
   String _getUnitSnippet(SchedulesViewModel model, LanguageService localization) {
@@ -2036,9 +2164,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
         ),
         child: Column(
           children: [
@@ -2047,7 +2175,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             const SizedBox(height: 25),
             Text(
               localization.getString('select_my_stop'), 
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF064DC3), letterSpacing: 1),
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.primary : const Color(0xFF064DC3), letterSpacing: 1),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
@@ -2077,10 +2205,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF064DC3).withOpacity(0.05) : Colors.white,
+                        color: isSelected ? const Color(0xFF064DC3).withOpacity(0.05) : Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF064DC3) : Colors.grey[200]!,
+                          color: isSelected ? const Color(0xFF064DC3) : (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]!),
                           width: isSelected ? 2 : 1,
                         ),
                         boxShadow: isSelected ? [
@@ -2176,11 +2304,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected 
+                ? (Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.15) : Colors.white)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             boxShadow: isSelected ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               )
@@ -2190,7 +2320,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
             localization.getString(label),
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected ? const Color(0xFF064DC3) : Colors.grey[600],
+              color: isSelected 
+                  ? const Color(0xFF064DC3) 
+                  : (Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600]),
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -2500,11 +2632,11 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.info_outline_rounded, color: Colors.white.withOpacity(0.5), size: 60),
+                      Icon(Icons.info_outline_rounded, color: Colors.white.withOpacity(0.8), size: 60),
                       const SizedBox(height: 20),
                       Text(
                         context.read<LanguageService>().getString('no_flyers_to_show').replaceFirst('{title}', widget.title.toLowerCase()),
-                        style: const TextStyle(color: Colors.white70, fontSize: 16),
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
                       ),
                     ],
                   ),
@@ -2808,11 +2940,11 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -2840,10 +2972,10 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                     children: [
                       Text(
                         widget.groupName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          color: Colors.black87,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
                       if (widget.routes.isNotEmpty && widget.routes.first.dia_ruta != null && widget.routes.first.dia_ruta!.isNotEmpty)
@@ -2855,14 +2987,14 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                               const SizedBox(width: 4),
                                Text(
                                  context.read<LanguageService>().getString(widget.model.getActiveDaysForRoute(widget.routes.first)),
-                                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                 style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600], fontSize: 12),
                                ),
                             ],
                           ),
                         ),
                       Text(
                         "${widget.routes.length} ${context.read<LanguageService>().getString('available_schedules')}",
-                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[500], fontSize: 12),
                       ),
                     ],
                   ),
@@ -2900,7 +3032,11 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFF064DC3).withOpacity(0.05) : Colors.grey[50],
+                          color: isSelected 
+                              ? const Color(0xFF064DC3).withOpacity(0.05) 
+                              : Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white.withOpacity(0.05) 
+                                  : Colors.grey[50],
                           borderRadius: BorderRadius.circular(15),
                           border: Border.all(
                             color: isSelected ? const Color(0xFF064DC3) : Colors.transparent,
@@ -2921,12 +3057,12 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              color: isSelected ? const Color(0xFF064DC3) : Colors.black87,
+                              color: isSelected ? const Color(0xFF064DC3) : Theme.of(context).textTheme.bodyLarge?.color,
                             ),
                           ),
                           subtitle: Text(
                             context.read<LanguageService>().getString('view_details'), 
-                            style: TextStyle(fontSize: 11, color: Colors.grey[500])
+                            style: TextStyle(fontSize: 11, color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[500])
                           ),
                           trailing: const Icon(Icons.info_outline_rounded, size: 20, color: Colors.grey),
                            onTap: () {
@@ -2963,18 +3099,22 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF064DC3) : Colors.grey[100],
+            color: isSelected 
+                ? const Color(0xFF064DC3) 
+                : Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white.withOpacity(0.1) 
+                    : Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+              Icon(icon, size: 16, color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600])),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey[600],
+                  color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600]),
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),

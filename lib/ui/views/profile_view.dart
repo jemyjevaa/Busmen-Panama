@@ -13,23 +13,34 @@ class ProfileView extends StatelessWidget {
     final viewModel = context.watch<ProfileViewModel>();
     final localization = context.watch<LanguageService>();
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.grey[100], // Cleaner background
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           // Gradient Header with Curve
           Container(
             height: 250,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
                 colors: [Color(0xFF064DC3), Color(0xFF0C13A2)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.only(
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(30),
                 bottomRight: Radius.circular(30),
               ),
+              boxShadow: [
+                if (isDark)
+                  const BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 15,
+                    offset: Offset(0, 4),
+                  ),
+              ],
             ),
           ),
           
@@ -64,11 +75,11 @@ class ProfileView extends StatelessWidget {
                         margin: const EdgeInsets.only(top: 60), // Medium space for medium logo
                         padding: const EdgeInsets.fromLTRB(20, 70, 20, 20), // Adjusted padding
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: theme.cardColor,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 5),
                             ),
@@ -78,10 +89,10 @@ class ProfileView extends StatelessWidget {
                           children: [
                             Text(
                               viewModel.userName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF333333),
+                                color: theme.textTheme.bodyLarge?.color,
                               ),
                             ),
                              const SizedBox(height: 5),
@@ -103,9 +114,9 @@ class ProfileView extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: Colors.grey[50],
+                                color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
                                 borderRadius: BorderRadius.circular(15),
-                                border: Border.all(color: Colors.grey[200]!),
+                                border: Border.all(color: isDark ? Colors.white12 : Colors.grey[200]!),
                               ),
                               child: Column(
                                 children: [
@@ -123,7 +134,7 @@ class ProfileView extends StatelessWidget {
                                     data: viewModel.userId,
                                     version: QrVersions.auto,
                                     size: 180.0,
-                                    foregroundColor: const Color(0xFF333333),
+                                    foregroundColor: isDark ? Colors.white : const Color(0xFF333333),
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
