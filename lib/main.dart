@@ -54,9 +54,24 @@ class MyApp extends StatelessWidget {
       title: 'Busmen Panama',
       scaffoldMessengerKey: scaffoldMessengerKey,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0C13A2)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0C13A2),
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFF),
+        cardColor: Colors.white,
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0C13A2),
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+        cardColor: const Color(0xFF1E1E1E),
+        useMaterial3: true,
+      ),
+      themeMode: ThemeMode.system,
       home:CacheUserSession().isLogin? const HomeView() :const LoginView(),
     );
   }

@@ -12,6 +12,7 @@ import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final _session = CacheUserSession();
@@ -138,6 +139,23 @@ class HomeViewModel extends ChangeNotifier {
   bool _isLoadingLocation = true;
   bool get isLoadingLocation => _isLoadingLocation;
 
+  // --- Dark Mode Map Style ---
+  String? _darkMapStyle;
+  bool _isDarkMode = false;
+  /// Returns the preloaded dark style JSON string when dark, null when light.
+  String? get mapStyle => _isDarkMode ? _darkMapStyle : null;
+
+  /// Call this once at startup to preload the map style JSON from assets.
+  Future<void> preloadMapStyle() async {
+    try {
+      _darkMapStyle = await rootBundle.loadString('assets/map_styles/dark_map_style.json');
+      debugPrint('Map style preloaded successfully');
+    } catch (e) {
+      debugPrint('Failed to preload map style: $e');
+    }
+  }
+  // --- End Dark Mode Map Style ---
+
   int? get userSide => _session.userSide;
 
   void setSide(int side) {
@@ -155,8 +173,11 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onMapCreated(GoogleMapController controller) {
+  void onMapCreated(GoogleMapController controller, BuildContext context) {
     _mapController = controller;
+    _isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // notifyListeners not needed here — the style is passed declaratively via the widget's style parameter
+
     if (_qrRoute != null && _qrRoute!.paradas.isNotEmpty) {
       final firstStop = _qrRoute!.paradas.first;
       _mapController!.animateCamera(
@@ -170,6 +191,11 @@ class HomeViewModel extends ChangeNotifier {
         ),
       );
     }
+  }
+
+  void updateTheme(Brightness brightness) {
+    _isDarkMode = brightness == Brightness.dark;
+    notifyListeners(); // Triggers widget rebuild — new mapStyle getter value flows into GoogleMap widget
   }
 
   Future<void> getUserLocation() async {

@@ -137,6 +137,7 @@ class UnitData {
   final String lat;
   final String lon;
   final String? idplataformagps; // Device ID for WebSocket filtering
+  final double heading; // Added for icon rotation
 
   UnitData({
     required this.claveruta,
@@ -144,15 +145,21 @@ class UnitData {
     required this.lat,
     required this.lon,
     this.idplataformagps,
+    this.heading = 0.0,
   });
 
   factory UnitData.fromJson(Map<String, dynamic> json) {
+    final String eco = json['economico']?.toString() ?? '';
+    final String deviceId = json['idplataformagps']?.toString() ?? '';
+    
     return UnitData(
       claveruta: json['claveruta'] ?? '',
-      economico: json['economico'] ?? '',
+      // Fallback to device ID if economico is empty
+      economico: eco.isNotEmpty ? eco : (deviceId.isNotEmpty ? deviceId : '---'),
       lat: json['lat'] ?? '0.0',
       lon: json['lon'] ?? '0.0',
-      idplataformagps: json['idplataformagps']?.toString(),
+      idplataformagps: deviceId,
+      heading: double.tryParse(json['heading']?.toString() ?? '0.0') ?? 0.0,
     );
   }
 }

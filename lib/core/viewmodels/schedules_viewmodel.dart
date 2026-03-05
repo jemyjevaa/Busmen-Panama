@@ -276,88 +276,78 @@ class SchedulesViewModel extends ChangeNotifier {
       final now = DateTime.now();
       final String turno = route.tipo_ruta.toUpperCase();
       final String diaRuta = (route.dia_ruta ?? '').toUpperCase();
-      
-      // 1. Check Day - Use dia_ruta field if available, otherwise fallback to tipo_ruta
+
+      // 1. Check Day
       bool dayMatch = false;
-      int weekday = now.weekday; // 1 (Mon) - 7 (Sun)
-      
-      // Prefer dia_ruta field for day matching
+      int weekday = now.weekday;
+
       final daySource = diaRuta.isNotEmpty ? diaRuta : turno;
-      
-      // Expanded day keywords - IMPORTANT: Priority matters to avoid partial matches
-    if (daySource.contains('DIARIO') || daySource.contains('TODOS') || daySource.contains('LUN-DOM') || daySource.isEmpty) {
-      dayMatch = true; 
-    } else if (daySource.contains('L-V') || daySource.contains('LUN-VIE') || daySource.contains('LUNES A VIERNES')) {
-      dayMatch = (weekday >= 1 && weekday <= 5);
-    } else if (daySource.contains('SAB') || daySource.contains('SÁB') || daySource.contains('SABADO') || daySource.contains('SÁBADO')) {
-      dayMatch = (weekday == 6);
-    } else if (daySource.contains('DOM') || daySource.contains('DOMINGO')) {
-      dayMatch = (weekday == 7);
-    } else {
-      // If we can't determine the day, log it and default to false to avoid showing wrong routes
-      print("DEBUG - Unknown day format for route ${route.claveruta}: dia_ruta='$diaRuta', tipo_ruta='$turno'");
-      dayMatch = false;
-    }
-      
+
+      if (daySource.contains('DIARIO') ||
+          daySource.contains('TODOS') ||
+          daySource.contains('LUN-DOM') ||
+          daySource.isEmpty) {
+        dayMatch = true;
+      } else if (daySource.contains('L-V') ||
+          daySource.contains('LUN-VIE') ||
+          daySource.contains('LUNES A VIERNES')) {
+        dayMatch = (weekday >= 1 && weekday <= 5);
+      } else if (daySource.contains('SAB') ||
+          daySource.contains('SÁB') ||
+          daySource.contains('SABADO') ||
+          daySource.contains('SÁBADO')) {
+        dayMatch = (weekday == 6);
+      } else if (daySource.contains('DOM') || daySource.contains('DOMINGO')) {
+        dayMatch = (weekday == 7);
+      } else {
+        print(
+            "DEBUG - Unknown day format for route ${route.claveruta}: dia_ruta='$diaRuta', tipo_ruta='$turno'");
+        dayMatch = false;
+      }
+
       if (!dayMatch) {
-        print("DEBUG - Route ${route.claveruta} filtered out: today=$weekday, dia_ruta='$diaRuta'");
+        print(
+            "DEBUG - Route ${route.claveruta} filtered out: today=$weekday, dia_ruta='$diaRuta'");
         return false;
       }
 
-      // 2. Check Time Range
-      // Try using hora_inicio and hora_fin if they exist
-      String startTimeStr = route.hora_inicio ?? "";
-      String endTimeStr = route.hora_fin ?? "";
+      // 2. Check Time (same logic as Kotlin)
 
-      // If they are missing, try extracting from tipo_ruta/turno
-      if (startTimeStr.isEmpty) {
-        final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(turno);
-        if (timeMatch != null) {
-          startTimeStr = "${timeMatch.group(1)}:${timeMatch.group(2)}";
-        }
+      print("turno => ${route.tipo_ruta}");
+
+      final timeMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(turno);
+
+      if (timeMatch == null) {
+        print("DEBUG - No time found in tipo_ruta for route ${route.claveruta}");
+        return false;
       }
 
-      if (startTimeStr.isEmpty) return true; // Show it if we can't parse ANY time
+      int routeHour = int.parse(timeMatch.group(1)!);
 
-      final startParts = startTimeStr.split(':');
-      int startHour = int.parse(startParts[0]);
-      int startMin = int.parse(startParts[1]);
+      final nowHour = now.hour;
+      final nextHour = now.add(const Duration(hours: 1)).hour;
 
-      final routeStartTime = DateTime(now.year, now.month, now.day, startHour, startMin);
-      
-      DateTime windowStart;
-      DateTime windowEnd;
+      final routeHourStr = routeHour.toString().padLeft(2, '0');
+      final nowHourStr = nowHour.toString().padLeft(2, '0');
+      final nextHourStr = nextHour.toString().padLeft(2, '0');
 
-      if (endTimeStr.isNotEmpty && endTimeStr.contains(':')) {
-        final endParts = endTimeStr.split(':');
-        int endHour = int.parse(endParts[0]);
-        int endMin = int.parse(endParts[1]);
-        
-        // Window: 1 hour BEFORE start to ACTUAL end
-        windowStart = routeStartTime.subtract(const Duration(hours: 1));
-        windowEnd = DateTime(now.year, now.month, now.day, endHour, endMin);
-        
-        // If end is before start, it might cross midnight (unlikely for these routes, but good to handle)
-        if (windowEnd.isBefore(routeStartTime)) {
-           windowEnd = windowEnd.add(const Duration(days: 1));
-        }
-      } else {
-        // Fallback: 60 minutes before to 3 hours after start if no end time exists
-        windowStart = routeStartTime.subtract(const Duration(minutes: 60));
-        windowEnd = routeStartTime.add(const Duration(hours: 3));
-      }
+      print("DEBUG - Route hour: $routeHourStr");
+      print("DEBUG - Now hour: $nowHourStr");
+      print("DEBUG - Next hour: $nextHourStr");
 
-      // Final check: Is current time within the active operational window?
-      final isInTimeWindow = now.isAfter(windowStart) && now.isBefore(windowEnd);
-      
+      bool isInTimeWindow =
+          routeHourStr.compareTo(nowHourStr) >= 0 &&
+              routeHourStr.compareTo(nextHourStr) < 0;
+
       if (!isInTimeWindow) {
-        print("DEBUG - Route ${route.claveruta} filtered out by time: now=${now.hour}:${now.minute}, window=${startTimeStr}-${endTimeStr}");
+        print(
+            "DEBUG - Route ${route.claveruta} filtered out by hour window");
       }
-      
+
       return isInTimeWindow;
     } catch (e) {
       debugPrint("Error in _isRouteInTime: $e");
-      return false; // Changed from true to false - don't show routes with errors
+      return false;
     }
   }
 
@@ -582,19 +572,41 @@ class SchedulesViewModel extends ChangeNotifier {
   }
 
   void _updateUnitPosition(String lat, String lon, {String? economico}) {
-  if (_unit != null || economico != null) {
-    final String finalEconomico = economico ?? _unit?.economico ?? '---';
-    print("🚌 $finalEconomico: $lat, $lon");
-    _unit = UnitData(
-      economico: finalEconomico,
-      lat: lat,
-      lon: lon,
-      claveruta: _selectedRoute?.claveruta ?? _unit?.claveruta ?? '',
-      idplataformagps: _unit?.idplataformagps ?? '',
-    );
-    notifyListeners();
+    if (_unit != null || economico != null) {
+      final String finalEconomico = economico ?? _unit?.economico ?? '---';
+      final double newLat = double.tryParse(lat) ?? 0.0;
+      final double newLon = double.tryParse(lon) ?? 0.0;
+      
+      double newHeading = _unit?.heading ?? 0.0;
+      
+      // Calculate bearing if we have a previous valid position
+      if (_unit != null) {
+         final double oldLat = double.tryParse(_unit!.lat) ?? 0.0;
+         final double oldLon = double.tryParse(_unit!.lon) ?? 0.0;
+         
+         if (oldLat != 0.0 && oldLon != 0.0 && newLat != 0.0 && newLon != 0.0) {
+            final double distance = Geolocator.distanceBetween(oldLat, oldLon, newLat, newLon);
+            
+            // Only update heading if moved more than 2 meters to avoid jitter
+            if (distance > 2.0) {
+               newHeading = Geolocator.bearingBetween(oldLat, oldLon, newLat, newLon);
+            }
+         }
+      }
+
+      print("🚌 $finalEconomico: $lat, $lon | Heading: $newHeading");
+      _unit = UnitData(
+        economico: finalEconomico,
+        lat: lat,
+        lon: lon,
+        claveruta: _selectedRoute?.claveruta ?? _unit?.claveruta ?? '',
+        idplataformagps: _unit?.idplataformagps ?? '',
+        heading: newHeading, // Store calculated heading
+      );
+
+      notifyListeners();
+    }
   }
-}
 
   Future<void> fetchLastPosition(String claveruta) async {
     try {

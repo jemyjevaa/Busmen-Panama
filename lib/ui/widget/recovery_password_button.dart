@@ -61,12 +61,12 @@ class _RecoveryButtonState extends State<RecoveryButton>
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.transparent,
-            foregroundColor: Colors.grey[700],
+            foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.grey[700],
             elevation: 0,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
-              side: BorderSide(color: Colors.grey[300]!),
+              side: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.grey[300]!),
             ),
           ),
           child: Text(
@@ -91,9 +91,9 @@ class _RecoveryButtonState extends State<RecoveryButton>
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
           ),
           padding: const EdgeInsets.all(30),
           child: Column(
@@ -101,10 +101,10 @@ class _RecoveryButtonState extends State<RecoveryButton>
             children: [
               Text(
                 localization.getString('recover_access'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF064DC3),
+                  color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.primary : const Color(0xFF064DC3),
                 ),
               ),
               const SizedBox(height: 20),
@@ -156,7 +156,7 @@ class _RecoveryButtonState extends State<RecoveryButton>
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text(localization.getString('cancel_btn'), style: TextStyle(color: Colors.grey[600])),
+                child: Text(localization.getString('cancel_btn'), style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[600])),
               ),
             ],
           ),

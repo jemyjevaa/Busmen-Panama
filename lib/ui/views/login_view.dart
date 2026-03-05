@@ -43,188 +43,222 @@ class _LoginViewState extends State<LoginView> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: false, 
-      body: Stack(
-        children: [
-         
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/backgrounds/BusmenPanama17.png',
-              fit: BoxFit.cover,
-              alignment: Alignment.bottomCenter, 
-            ),
-          ),
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-         
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.only(bottom: bottomInset > 0 ? bottomInset + 20 : 20),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+    return Theme(
+      data: theme.copyWith(
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: theme.colorScheme.copyWith(brightness: Brightness.light),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true,
+        body: Stack(
+          children: [
+            // Full-screen background image
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/backgrounds/FondoPanamaNN4.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
+            ),
+
+            // Subtle gradient overlay for readability
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.transparent,
+                      Color(0x33000000),
+                    ],
+                    stops: [0.0, 0.5, 1.0],
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 35),
+              ),
+            ),
+
+            // Small logo centered in the upper half
+           
+
+            // White card pinned to the bottom
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.only(
+                    top: 30,
+                    left: 28,
+                    right: 28,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 20,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x33000000),
+                        blurRadius: 30,
+                        offset: Offset(0, -8),
+                      ),
+                    ],
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, // Align to left
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: size.height * 0.12), // Fixed top margin
-                      
-                      // Logo aligned left
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Image.asset(
-                          'assets/images/logos/LogoBusmen.png',
-                          height: 69,
-                          fit: BoxFit.contain,
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 22),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                         ),
                       ),
-                      
-                      const SizedBox(height: 15), 
-                      
-                      // Form Card WITHOUT background
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 450), 
-                        padding: const EdgeInsets.symmetric(vertical: 20),
+
+                      Form(
+                        key: viewModel.formKeyLogin,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Form(
-                              key: viewModel.formKeyLogin,
-                              autovalidateMode: AutovalidateMode.onUserInteraction,
-                              child: Column(
-                                children: [
-                                  // User Label
-                                  Text(
-                                    localization.getString('user_label'),
-                                    style: const TextStyle(
-                                      color: Color(0xFF064DC3),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1.0,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  buildTextField(
-                                    controller: viewModel.userController,
-                                    hint: localization.getString('user_label'),
-                                    icon: Icons.person_outline,
-                                    isSuccess: viewModel.identifiedCompany != 0,
-                                    onChanged: viewModel.identifyCompany, // Reliability fix
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return localization.getString('fill_all_fields');
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 10),
+                            // User label
+                            Text(
+                              localization.getString('user_label'),
+                              style: const TextStyle(
+                                color: Color(0xFF064DC3),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            buildTextField(
+                              controller: viewModel.userController,
+                              hint: localization.getString('user_label'),
+                              icon: Icons.person_outline,
+                              isSuccess: viewModel.identifiedCompany != 0,
+                              onChanged: viewModel.identifyCompany,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return localization.getString('fill_all_fields');
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
 
-                                  Text(
-                                    localization.getString('pass_label'),
-                                    style: const TextStyle(
-                                      color: Color(0xFF064DC3),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1.0,
+                            // Password label
+                            Text(
+                              localization.getString('pass_label'),
+                              style: const TextStyle(
+                                color: Color(0xFF064DC3),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            buildTextField(
+                              controller: viewModel.passwordController,
+                              hint: localization.getString('pass_label'),
+                              icon: Icons.lock_outline,
+                              isPassword: true,
+                              obscureText: viewModel.obscurePassword,
+                              onToggleVisibility: viewModel.togglePasswordVisibility,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  viewModel.isPasswordObscured
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: const Color(0xFF064DC3),
+                                  size: 20,
+                                ),
+                                onPressed: viewModel.togglePasswordVisibility,
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return localization.getString('fill_all_fields');
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Remember Me + Language switcher
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Theme(
+                                    data: Theme.of(context).copyWith(
+                                      unselectedWidgetColor: Colors.grey[400],
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  buildTextField(
-                                    controller: viewModel.passwordController,
-                                    hint: localization.getString('pass_label'),
-                                    icon: Icons.lock_outline,
-                                    isPassword: true,
-                                    obscureText: viewModel.obscurePassword,
-                                    onToggleVisibility: viewModel.togglePasswordVisibility,
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        viewModel.isPasswordObscured
-                                            ? Icons.visibility_off_outlined
-                                            : Icons.visibility_outlined,
-                                        color: const Color(0xFF064DC3),
-                                        size: 20,
+                                    child: CheckboxListTile(
+                                      value: viewModel.rememberMe,
+                                      onChanged: viewModel.toggleRememberMe,
+                                      title: Text(
+                                        localization.getString('remember_me'),
+                                        style: const TextStyle(
+                                          color: Color(0xFF555555),
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                      onPressed: viewModel.togglePasswordVisibility,
+                                      controlAffinity: ListTileControlAffinity.leading,
+                                      contentPadding: EdgeInsets.zero,
+                                      activeColor: const Color(0xFF064DC3),
+                                      dense: true,
                                     ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return localization.getString('fill_all_fields');
-                                      }
-                                      return null;
-                                    },
                                   ),
-                                  const SizedBox(height: 30),
-
-                                  // Remember Me & Language (Always visible)
-                                  Row(
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: Colors.grey[300]!),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Expanded(
-                                        child: Theme(
-                                          data: Theme.of(context).copyWith(
-                                            unselectedWidgetColor: Colors.grey[400],
-                                          ),
-                                          child: CheckboxListTile(
-                                            value: viewModel.rememberMe,
-                                            onChanged: viewModel.toggleRememberMe,
-                                            title: Text(
-                                              localization.getString('remember_me'),
-                                              style: const TextStyle(
-                                                color: Color(0xFF555555),
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            controlAffinity: ListTileControlAffinity.leading,
-                                            contentPadding: EdgeInsets.zero,
-                                            activeColor: const Color(0xFF064DC3),
-                                            dense: true,
-                                          ),
-                                        ),
+                                      _buildLanguageOption(
+                                        context, 'ES',
+                                        localization.currentLanguage == 'ES',
+                                        () {
+                                          localization.setLanguage('ES');
+                                          viewModel.language.setLanguage('ES');
+                                        },
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.all(3),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: Colors.grey[300]!),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            _buildLanguageOption(
-                                              context,
-                                              'ES',
-                                              localization.currentLanguage == 'ES',
-                                                  () {
-                                                        localization.setLanguage('ES');
-                                                        viewModel.language.setLanguage('ES');
-                                                  },
-                                            ),
-                                            _buildLanguageOption(
-                                              context,
-                                              'EN',
-                                              localization.currentLanguage == 'EN',
-                                                  () {
-                                                localization.setLanguage('EN');
-                                                viewModel.language.setLanguage('EN');
-                                              },
-                                            ),
-                                          ],
-                                        ),
+                                      _buildLanguageOption(
+                                        context, 'EN',
+                                        localization.currentLanguage == 'EN',
+                                        () {
+                                          localization.setLanguage('EN');
+                                          viewModel.language.setLanguage('EN');
+                                        },
                                       ),
                                     ],
                                   ),
+                                ),
+                              ],
+                            ),
 
-                                  const SizedBox(height: 30),
-                                  // Login Button (Shared)
-                                  viewModel.loadingLogIn?
-                                      const Center(
-                                      child: CircularProgressIndicator(),
-                                      )
-                                      :SizedBox(
+                            const SizedBox(height: 24),
+
+                            // Login Button
+                            viewModel.loadingLogIn
+                                ? const Center(child: CircularProgressIndicator())
+                                : SizedBox(
                                     width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed: () {
@@ -235,9 +269,7 @@ class _LoginViewState extends State<LoginView> {
                                         backgroundColor: const Color(0xFF064DC3),
                                         foregroundColor: Colors.white,
                                         padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(15),
-                                        ),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                                         elevation: 2,
                                       ),
                                       child: Text(
@@ -250,43 +282,38 @@ class _LoginViewState extends State<LoginView> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 15),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(builder: (context) => const QRScannerView()),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.qr_code_scanner),
-                                      label: Text(
-                                        localization.getString('scan_qr'),
-                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                        foregroundColor: const Color(0xFF064DC3),
-                                        side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                        elevation: 0,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  RecoveryButton(
-                                    viewModel: viewModel,
-                                    localization: localization,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  RegisterButton(
-                                    viewModel: viewModel,
-                                    localization: localization,
-                                  ),
-                                ],
+
+                            const SizedBox(height: 12),
+
+                            // QR Scan Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(builder: (context) => const QRScannerView()),
+                                  );
+                                },
+                                icon: const Icon(Icons.qr_code_scanner),
+                                label: Text(
+                                  localization.getString('scan_qr'),
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF064DC3),
+                                  side: const BorderSide(color: Color(0xFF064DC3), width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  elevation: 0,
+                                ),
                               ),
                             ),
+
+                            const SizedBox(height: 16),
+                            RecoveryButton(viewModel: viewModel, localization: localization),
+                            const SizedBox(height: 8),
+                            RegisterButton(viewModel: viewModel, localization: localization),
                           ],
                         ),
                       ),
@@ -295,10 +322,10 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      ), // Scaffold
+    ); // Theme
   }
 
   Widget _buildLanguageOption(BuildContext context, String label, bool isSelected, VoidCallback onTap) {
@@ -313,7 +340,7 @@ class _LoginViewState extends State<LoginView> {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[600],
+            color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[600]),
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),

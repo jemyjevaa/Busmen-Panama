@@ -57,10 +57,10 @@ class _RegisterButtonState extends State<RegisterButton>
           onPressed: () =>
               _showRegisterSheet(context, widget.viewModel, widget.localization),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF064DC3),
-            side: const BorderSide(
-              color: Color(0xFF064DC3),
+            backgroundColor: Theme.of(context).cardColor,
+            foregroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.primary : const Color(0xFF064DC3),
+            side: BorderSide(
+              color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.primary : const Color(0xFF064DC3),
               width: 1.5,
             ),
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -91,9 +91,9 @@ class _RegisterButtonState extends State<RegisterButton>
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
           ),
           padding: const EdgeInsets.all(30),
           child: Column(
@@ -101,10 +101,10 @@ class _RegisterButtonState extends State<RegisterButton>
             children: [
               Text(
                 localization.getString('create_account'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF064DC3),
+                  color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.primary : const Color(0xFF064DC3),
                 ),
               ),
               const SizedBox(height: 20),
@@ -180,7 +180,7 @@ class _RegisterButtonState extends State<RegisterButton>
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text(localization.getString('back_btn'), style: TextStyle(color: Colors.grey[600])),
+                child: Text(localization.getString('back_btn'), style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[600])),
               ),
             ],
           ),
