@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:busmen_panama/core/services/models/qr_route_model.dart';
+import 'package:busmen_panama/core/services/request_service.dart';
+import 'package:busmen_panama/core/services/url_service.dart';
 import 'package:busmen_panama/ui/views/home_view.dart';
 
 class QRScannerView extends StatefulWidget {
@@ -19,31 +21,31 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
     autoStart: true,
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
+
   bool _isScanning = true;
-  String? _lastError;
+  String? _statusMessage;
   bool _hasPermission = false;
   bool _isCheckingPermission = true;
+  bool _isLoading = false;
+
+  final _urlService = UrlService();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
-    // Diagnostic listener
+
     controller.addListener(() {
-      if (controller.value.isInitialized && _lastError == null) {
-        debugPrint('QRScanner: Controller initialized and ready');
-        if (mounted) setState(() => _lastError = 'Escáner listo. Enfoca el QR.');
+      if (controller.value.isInitialized && _statusMessage == null) {
+        if (mounted) setState(() => _statusMessage = 'Escáner listo. Enfoca el QR.');
       }
       if (controller.value.error != null) {
         final error = controller.value.error!;
-        // Silence "already started" as it's a common harmless Android race condition
-        if (error.errorCode == MobileScannerErrorCode.genericError && 
+        if (error.errorCode == MobileScannerErrorCode.genericError &&
             (error.errorDetails?.message?.contains('already started') ?? false)) {
-          debugPrint('QRScanner: Ignored harmless "already started" error');
-          return;
+          return; // harmless Android race condition
         }
-        debugPrint('QRScanner: Controller error: ${error.errorCode} - ${error.errorDetails?.message}');
+        debugPrint('QRScanner: Controller error: ${error.errorCode}');
       }
     });
 
@@ -51,36 +53,28 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
   }
 
   Future<void> _checkPermission() async {
-    debugPrint('QRScanner: Checking camera permission...');
     try {
-      // Add a timeout just in case request() hangs on some devices
       final status = await Permission.camera.request().timeout(
         const Duration(seconds: 5),
-        onTimeout: () {
-          debugPrint('QRScanner: Permission request timed out');
-          return PermissionStatus.denied;
-        },
+        onTimeout: () => PermissionStatus.denied,
       );
-      
-      debugPrint('QRScanner: Permission status: $status');
-      
+
       if (mounted) {
         setState(() {
           _hasPermission = status.isGranted;
           _isCheckingPermission = false;
           if (status.isPermanentlyDenied) {
-            _lastError = 'El permiso fue denegado permanentemente. Por favor, habilítalo en los ajustes.';
+            _statusMessage = 'El permiso fue denegado permanentemente. Por favor, habilítalo en los ajustes.';
           } else if (!status.isGranted) {
-            _lastError = 'Permiso de cámara denegado';
+            _statusMessage = 'Permiso de cámara denegado';
           }
         });
       }
     } catch (e) {
-      debugPrint('QRScanner: Error checking permission: $e');
       if (mounted) {
         setState(() {
           _isCheckingPermission = false;
-          _lastError = 'Error al verificar permisos: $e';
+          _statusMessage = 'Error al verificar permisos: $e';
         });
       }
     }
@@ -88,39 +82,132 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
 
   Future<void> _safeStart() async {
     try {
-      if (!controller.value.isRunning) {
-        debugPrint('QRScanner: Starting controller...');
-        await controller.start();
-      }
+      if (!controller.value.isRunning) await controller.start();
     } catch (e) {
-      debugPrint('QRScanner: Error in safeStart: $e');
+      debugPrint('QRScanner: safeStart error: $e');
     }
   }
 
   Future<void> _safeStop() async {
     try {
-      if (controller.value.isRunning) {
-        debugPrint('QRScanner: Stopping controller...');
-        await controller.stop();
-      }
+      if (controller.value.isRunning) await controller.stop();
     } catch (e) {
-      debugPrint('QRScanner: Error in safeStop: $e');
+      debugPrint('QRScanner: safeStop error: $e');
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!controller.value.isInitialized) return;
+    if (state == AppLifecycleState.resumed) _safeStart();
+    if (state == AppLifecycleState.inactive) _safeStop();
+  }
 
-    switch (state) {
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-      case AppLifecycleState.paused:
-        return;
-      case AppLifecycleState.resumed:
-        _safeStart();
-      case AppLifecycleState.inactive:
-        _safeStop();
+  /// Extracts id_frecuencia from a URL like:
+  /// https://lectorasbusmenpa.geovoy.com/...?id_frecuencia=73
+  int? _extractIdFrecuencia(String raw) {
+    try {
+      final uri = Uri.tryParse(raw);
+      if (uri != null && uri.queryParameters.containsKey('id_frecuencia')) {
+        return int.tryParse(uri.queryParameters['id_frecuencia']!);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Calls the frequency API and navigates to HomeView with the result.
+  Future<void> _fetchAndNavigate(int idFrecuencia) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _statusMessage = 'Consultando ruta... (ID: $idFrecuencia)';
+    });
+
+    try {
+      final url = _urlService.getUrlQRFrecuencia(idFrecuencia);
+      debugPrint('QRScanner: Calling API: $url');
+
+      // Use RequestService so the JSESSIONID cookie is sent automatically
+      final qrResponse = await RequestService.instance.handlingRequestParsed<QRRouteResponse>(
+        urlParam: url,
+        method: 'GET',
+        fromJson: (json) => QRRouteResponse.fromJson(json as Map<String, dynamic>),
+      );
+
+      if (qrResponse != null) {
+        debugPrint('QRScanner: Success! Route: ${qrResponse.frecuencia.nombre}');
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => HomeView(qrRoute: qrResponse)),
+        );
+      } else {
+        debugPrint('QRScanner: API returned null — check credentials or endpoint');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _isScanning = true;
+            _statusMessage = 'No se pudo obtener la ruta. Intenta de nuevo.';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('QRScanner: Fetch error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isScanning = true;
+          _statusMessage = 'Error de conexión. Verifica tu internet.';
+        });
+      }
+    }
+  }
+
+  /// Processes a detected barcode value.
+  void _onCodeDetected(String code) async {
+    if (!_isScanning || _isLoading) return;
+    setState(() => _isScanning = false);
+
+    debugPrint('QRScanner: Raw value: $code');
+    setState(() => _statusMessage = 'Código detectado. Procesando...');
+
+    // 1. Try to extract id_frecuencia from URL
+    final idFromUrl = _extractIdFrecuencia(code);
+    if (idFromUrl != null) {
+      await _safeStop();
+      await _fetchAndNavigate(idFromUrl);
+      return;
+    }
+
+    // 2. Try plain integer — QR contains just the id_frecuencia number
+    final idFromPlain = int.tryParse(code.trim());
+    if (idFromPlain != null) {
+      await _safeStop();
+      await _fetchAndNavigate(idFromPlain);
+      return;
+    }
+
+    // 3. Fallback: try to parse raw JSON Map (legacy support)
+    try {
+      final decoded = jsonDecode(code);
+      if (decoded is! Map<String, dynamic>) {
+        throw FormatException('Expected JSON object, got ${decoded.runtimeType}');
+      }
+      final qrResponse = QRRouteResponse.fromJson(decoded);
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomeView(qrRoute: qrResponse)),
+      );
+    } catch (e) {
+      debugPrint('QRScanner: Not a valid QR: $e');
+      if (mounted) {
+        setState(() {
+          _isScanning = true;
+          _statusMessage = 'QR no válido para ruta. Intenta con otro código.';
+        });
+        await _safeStart();
+      }
     }
   }
 
@@ -136,204 +223,179 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
       body: _isCheckingPermission
           ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : !_hasPermission
-              ? Center(
-                  child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 60),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Se requiere permiso de cámara\npara escanear el QR',
-                        style: TextStyle(color: Colors.white),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final status = await Permission.camera.status;
-                          if (status.isPermanentlyDenied) {
-                            await openAppSettings();
-                          } else {
-                            _checkPermission();
-                          }
-                        },
-                        child: Text(
-                          _lastError?.contains('ajustes') ?? false 
-                            ? 'Abrir Ajustes' 
-                            : 'Conceder Permiso'
-                        ),
-                      ),
-                    ],
-                  ),
-                )
+              ? _buildPermissionError()
               : Stack(
                   children: [
+                    // Camera
                     MobileScanner(
-            controller: controller,
-            placeholderBuilder: (context, child) {
-              return const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text('Iniciando cámara...', style: TextStyle(color: Colors.white)),
-                  ],
-                ),
-              );
-            },
-            errorBuilder: (context, error, child) {
-              // Silence "already started" error screen
-              if (error.errorCode == MobileScannerErrorCode.genericError && 
-                  (error.errorDetails?.message?.contains('already started') ?? false)) {
-                return const SizedBox.shrink(); // Show nothing, just let it run
-              }
-              
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 60),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error al iniciar cámara: ${error.errorCode}',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
+                      controller: controller,
+                      placeholderBuilder: (context, child) => const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(color: Colors.white),
+                            SizedBox(height: 16),
+                            Text('Iniciando cámara...', style: TextStyle(color: Colors.white)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        error.errorDetails?.message ?? 'Asegúrate de conceder permisos de cámara.',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () => controller.start(),
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            onDetect: (capture) {
-              final List<Barcode> barcodes = capture.barcodes;
-              debugPrint('QRScanner: onDetect called. Found ${barcodes.length} barcodes');
-              
-              if (barcodes.isNotEmpty && mounted) {
-                setState(() => _lastError = '¡Código detectado! Procesando...');
-              }
+                      errorBuilder: (context, error, child) {
+                        if (error.errorCode == MobileScannerErrorCode.genericError &&
+                            (error.errorDetails?.message?.contains('already started') ?? false)) {
+                          return const SizedBox.shrink();
+                        }
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Error al iniciar cámara: ${error.errorCode}',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () => controller.start(),
+                                  child: const Text('Reintentar'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      onDetect: (capture) {
+                        for (final barcode in capture.barcodes) {
+                          final code = barcode.rawValue;
+                          if (code != null) {
+                            _onCodeDetected(code);
+                            break;
+                          }
+                        }
+                      },
+                    ),
 
-              if (!_isScanning) return;
-              
-              for (final barcode in barcodes) {
-                final String? code = barcode.rawValue;
-                debugPrint('QRScanner: Raw value: $code');
-                
-                if (code != null) {
-                  setState(() => _lastError = 'Detectado: ${code.length > 20 ? code.substring(0, 20) + "..." : code}');
-                  
-                  try {
-                    debugPrint('QRScanner: Attempting to decode JSON...');
-                    final Map<String, dynamic> jsonData = jsonDecode(code);
-                    
-                    debugPrint('QRScanner: Attempting to parse QRRouteResponse...');
-                    final qrResponse = QRRouteResponse.fromJson(jsonData);
-                    
-                    debugPrint('QRScanner: Success! Navigating to HomeView...');
-                    setState(() => _isScanning = false);
-                    
-                    if (!mounted) return;
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => HomeView(qrRoute: qrResponse),
-                      ),
-                    );
-                    break;
-                  } catch (e) {
-                    debugPrint('QRScanner: Error processing QR: $e');
-                    setState(() {
-                      _isScanning = true;
-                      _lastError = 'Error: QR no válido para ruta';
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
-                  }
-                }
-              }
-            },
-          ),
-          Positioned(
-            top: 20,
-            right: 20,
-            child: CircleAvatar(
-              backgroundColor: Colors.black45,
-              child: IconButton(
-                onPressed: () => controller.toggleTorch(),
-                icon: ValueListenableBuilder(
-                  valueListenable: controller,
-                  builder: (context, state, child) {
-                    switch (state.torchState) {
-                      case TorchState.off:
-                        return const Icon(Icons.flash_off, color: Colors.white);
-                      case TorchState.on:
-                        return const Icon(Icons.flash_on, color: Colors.yellow);
-                      case TorchState.auto:
-                        return const Icon(Icons.flash_auto, color: Colors.white);
-                      case TorchState.unavailable:
-                        return const Icon(Icons.flash_off, color: Colors.grey);
-                    }
-                  },
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Column(
-                children: [
-                  const Text(
-                    'Posiciona el código QR dentro del recuadro',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  if (_lastError != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      child: Text(
-                        _lastError!,
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
-                        textAlign: TextAlign.center,
+                    // Torch button
+                    Positioned(
+                      top: 20,
+                      right: 20,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.black45,
+                        child: IconButton(
+                          onPressed: () => controller.toggleTorch(),
+                          icon: ValueListenableBuilder(
+                            valueListenable: controller,
+                            builder: (context, state, child) {
+                              switch (state.torchState) {
+                                case TorchState.on:
+                                  return const Icon(Icons.flash_on, color: Colors.yellow);
+                                default:
+                                  return const Icon(Icons.flash_off, color: Colors.white);
+                              }
+                            },
+                          ),
+                        ),
                       ),
                     ),
-                  const SizedBox(height: 10),
-                  TextButton.icon(
-                    onPressed: () async {
-                      await _safeStop();
-                      await Future.delayed(const Duration(milliseconds: 300));
-                      await _safeStart();
-                    },
-                    icon: const Icon(Icons.refresh, color: Colors.white70),
-                    label: const Text('Reiniciar Cámara', style: TextStyle(color: Colors.white70)),
-                  ),
-                ],
-              ),
+
+                    // Scan frame
+                    Center(
+                      child: Container(
+                        width: 280,
+                        height: 280,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _isLoading ? Colors.orangeAccent : Colors.white,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: _isLoading
+                            ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                            : null,
+                      ),
+                    ),
+
+                    // Bottom status
+                    Positioned(
+                      bottom: 40,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              _isLoading
+                                  ? 'Cargando ruta...'
+                                  : 'Posiciona el QR dentro del recuadro',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            if (_statusMessage != null)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                child: Text(
+                                  _statusMessage!,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            if (!_isLoading)
+                              TextButton.icon(
+                                onPressed: () async {
+                                  await _safeStop();
+                                  await Future.delayed(const Duration(milliseconds: 300));
+                                  setState(() {
+                                    _isScanning = true;
+                                    _statusMessage = 'Reiniciando...';
+                                  });
+                                  await _safeStart();
+                                },
+                                icon: const Icon(Icons.refresh, color: Colors.white70),
+                                label: const Text('Reiniciar', style: TextStyle(color: Colors.white70)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildPermissionError() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 60),
+          const SizedBox(height: 16),
+          const Text(
+            'Se requiere permiso de cámara\npara escanear el QR',
+            style: TextStyle(color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () async {
+              final status = await Permission.camera.status;
+              if (status.isPermanentlyDenied) {
+                await openAppSettings();
+              } else {
+                _checkPermission();
+              }
+            },
+            child: Text(
+              (_statusMessage?.contains('ajustes') ?? false)
+                  ? 'Abrir Ajustes'
+                  : 'Conceder Permiso',
             ),
           ),
         ],

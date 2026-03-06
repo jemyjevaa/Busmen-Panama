@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class RequestService {
 
-  String? _sessionCookie;
+  String? _sessionCookie;      // JSESSIONID for rastreobusmenpa.geovoy.com
+  String? _lectorasCookie;     // JSESSIONID for lectorasbusmenpa.geovoy.com
 
   // Singleton pattern
   RequestService._privateConstructor();
@@ -66,21 +67,28 @@ class RequestService {
       //final base = baseUrlNor; //isNormUrl ? baseUrlNor : baseUrlAdm;
       String fullUrl = urlParam;
 
-      // Check if this is a tracking API request that needs authentication
       final isTrackingApi = fullUrl.contains('rastreobusmenpa.geovoy.com');
+      final isLectorasApi = fullUrl.contains('lectorasbusmenpa.geovoy.com');
+
+      // Check if tracking API needs session cookie
       if (isTrackingApi && _sessionCookie == null) {
         await _initSessionCookie();
       }
+      // Restore lectorasbusmenpa cookie from prefs if not in memory
+      if (isLectorasApi && _lectorasCookie == null) {
+        final prefs = await SharedPreferences.getInstance();
+        _lectorasCookie = prefs.getString('lectorasbusmenpa_session_cookie');
+      }
 
+      // Handle GET — query params may already be in the URL or passed separately
       http.Response response;
-      print("fullUrl => $fullUrl");
-      print("params => $params");
-      // Agregar parámetros para GET en query string
-      if (method.toUpperCase() == 'GET' && params != null && params.isNotEmpty) {
-        final uri = Uri.parse(fullUrl).replace(queryParameters: params);
-        final headers = isTrackingApi && _sessionCookie != null 
-            ? {'Cookie': _sessionCookie!}
-            : <String, String>{};
+      if (method.toUpperCase() == 'GET') {
+        final uri = (params != null && params.isNotEmpty)
+            ? Uri.parse(fullUrl).replace(queryParameters: params)
+            : Uri.parse(fullUrl);
+        Map<String, String> headers = {};
+        if (isTrackingApi && _sessionCookie != null) headers['Cookie'] = _sessionCookie!;
+        if (isLectorasApi && _lectorasCookie != null) headers['Cookie'] = _lectorasCookie!;
         response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 10));
       } else {
         // Construir el body según asJson o form-url-encoded
@@ -101,6 +109,11 @@ class RequestService {
         if (isTrackingApi && _sessionCookie != null) {
           headers = headers ?? {};
           headers['Cookie'] = _sessionCookie!;
+        }
+        // Add session cookie for lectorasbusmenpa API requests
+        if (isLectorasApi && _lectorasCookie != null) {
+          headers = headers ?? {};
+          headers['Cookie'] = _lectorasCookie!;
         }
 
         if (customHeaders != null) {
@@ -137,6 +150,14 @@ class RequestService {
       }
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Capture and persist JSESSIONID from lectorasbusmenpa responses
+        final setCookie = response.headers['set-cookie'];
+        if (setCookie != null && fullUrl.contains('lectorasbusmenpa.geovoy.com')) {
+          _lectorasCookie = setCookie.split(';')[0];
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('lectorasbusmenpa_session_cookie', _lectorasCookie!);
+          print('DEBUG - Captured lectorasbusmenpa cookie');
+        }
         return response.body;
       } else {
         print("HTTP error: ${response.statusCode}");
