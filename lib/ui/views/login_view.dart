@@ -60,7 +60,7 @@ class _LoginViewState extends State<LoginView> {
             // Full-screen background image
             Positioned.fill(
               child: Image.asset(
-                'assets/images/backgrounds/FondoPanamaNN4.png',
+                'assets/images/backgrounds/FondoPanamaNN5.png',
                 fit: BoxFit.cover,
                 alignment: Alignment.center,
               ),
