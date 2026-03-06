@@ -18,42 +18,47 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
-
+  // Each LoginView instance owns its form key — never share from a singleton ViewModel
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final viewModel = context.read<LoginViewModel>();
+      final session = CacheUserSession();
 
-      if (CacheUserSession().isPerduration) {
-        viewModel.userController.text = CacheUserSession().perdureEmail;
-        viewModel.passwordController.text = CacheUserSession().perdurePass;
+      if (session.isPerduration &&
+          session.perdureEmail.isNotEmpty &&
+          session.perdurePass.isNotEmpty) {
+        // Auto-fill credentials
+        viewModel.userController.text = session.perdureEmail;
+        viewModel.passwordController.text = session.perdurePass;
+
+        // Auto-login if not already in a login attempt
+        if (!viewModel.loadingLogIn) {
+          viewModel.login(context, _formKey);
+        }
       }
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     final viewModel = context.watch<LoginViewModel>();
     final localization = context.watch<LanguageService>();
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Theme(
-      data: theme.copyWith(
-        brightness: Brightness.light,
+      data: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0C13A2),
+          brightness: Brightness.light,
+        ),
         scaffoldBackgroundColor: Colors.white,
-        colorScheme: theme.colorScheme.copyWith(brightness: Brightness.light),
+        useMaterial3: true,
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [
@@ -66,7 +71,7 @@ class _LoginViewState extends State<LoginView> {
               ),
             ),
 
-            // Subtle gradient overlay for readability
+            // Gradient overlay
             Positioned.fill(
               child: Container(
                 decoration: const BoxDecoration(
@@ -76,7 +81,7 @@ class _LoginViewState extends State<LoginView> {
                     colors: [
                       Colors.transparent,
                       Colors.transparent,
-                      Color(0x33000000),
+                      Color(0x44000000),
                     ],
                     stops: [0.0, 0.5, 1.0],
                   ),
@@ -84,32 +89,32 @@ class _LoginViewState extends State<LoginView> {
               ),
             ),
 
-            // Small logo centered in the upper half
-           
-
-            // White card pinned to the bottom
+            // White card pinned to bottom
             Align(
               alignment: Alignment.bottomCenter,
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Container(
-                  width: double.infinity,
+              child: Container(
+                width: double.infinity,
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.82,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 30,
+                      offset: Offset(0, -8),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.only(
                     top: 30,
                     left: 28,
                     right: 28,
-                    bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 20,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 30,
-                        offset: Offset(0, -8),
-                      ),
-                    ],
+                    bottom: MediaQuery.of(context).padding.bottom + 20,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -129,7 +134,7 @@ class _LoginViewState extends State<LoginView> {
                       ),
 
                       Form(
-                        key: viewModel.formKeyLogin,
+                        key: _formKey,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,25 +206,20 @@ class _LoginViewState extends State<LoginView> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: Theme(
-                                    data: Theme.of(context).copyWith(
-                                      unselectedWidgetColor: Colors.grey[400],
-                                    ),
-                                    child: CheckboxListTile(
-                                      value: viewModel.rememberMe,
-                                      onChanged: viewModel.toggleRememberMe,
-                                      title: Text(
-                                        localization.getString('remember_me'),
-                                        style: const TextStyle(
-                                          color: Color(0xFF555555),
-                                          fontSize: 13,
-                                        ),
+                                  child: CheckboxListTile(
+                                    value: viewModel.rememberMe,
+                                    onChanged: viewModel.toggleRememberMe,
+                                    title: Text(
+                                      localization.getString('remember_me'),
+                                      style: const TextStyle(
+                                        color: Color(0xFF555555),
+                                        fontSize: 13,
                                       ),
-                                      controlAffinity: ListTileControlAffinity.leading,
-                                      contentPadding: EdgeInsets.zero,
-                                      activeColor: const Color(0xFF064DC3),
-                                      dense: true,
                                     ),
+                                    controlAffinity: ListTileControlAffinity.leading,
+                                    contentPadding: EdgeInsets.zero,
+                                    activeColor: const Color(0xFF064DC3),
+                                    dense: true,
                                   ),
                                 ),
                                 Container(
@@ -263,7 +263,7 @@ class _LoginViewState extends State<LoginView> {
                                     child: ElevatedButton(
                                       onPressed: () {
                                         hideKeyboard(context);
-                                        viewModel.login(context);
+                                        viewModel.login(context, _formKey);
                                       },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFF064DC3),
@@ -291,7 +291,7 @@ class _LoginViewState extends State<LoginView> {
                               child: ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (context) => const QRScannerView()),
+                                    MaterialPageRoute(builder: (_) => const QRScannerView()),
                                   );
                                 },
                                 icon: const Icon(Icons.qr_code_scanner),
@@ -324,8 +324,8 @@ class _LoginViewState extends State<LoginView> {
             ),
           ],
         ),
-      ), // Scaffold
-    ); // Theme
+      ),
+    );
   }
 
   Widget _buildLanguageOption(BuildContext context, String label, bool isSelected, VoidCallback onTap) {
@@ -340,7 +340,7 @@ class _LoginViewState extends State<LoginView> {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[600]),
+            color: isSelected ? Colors.white : Colors.grey[600],
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),

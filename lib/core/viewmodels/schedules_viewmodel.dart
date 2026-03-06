@@ -765,6 +765,39 @@ class SchedulesViewModel extends ChangeNotifier {
     return getActiveDays(dayInfo);
   }
 
+  /// Returns formatted time for TRANSPORTEPP domain only:
+  /// - ENTRADA → hora_fin
+  /// - SALIDA  → tipo_ruta (turno) + 10 min
+  /// Returns null for all other companies (caller should fall back to localized tipo_ruta).
+  String? formatRouteTime(RouteData route) {
+    // Only apply custom logic for transportepp domain
+    final clave = (_session.companyClave ?? '').toLowerCase();
+    if (!clave.contains('transportepp')) return null;
+
+    final tramo = route.tramo.toUpperCase();
+
+    // ENTRADA: show the end time (hora_fin)
+    if (tramo.contains('ENTRADA')) {
+      final fin = route.hora_fin;
+      if (fin != null && fin.isNotEmpty) return fin;
+    }
+
+    // SALIDA (or fallback): show turno time + 10 minutes
+    final turno = route.tipo_ruta;
+    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(turno);
+    if (match != null) {
+      int h = int.parse(match.group(1)!);
+      int m = int.parse(match.group(2)!);
+      final total = m + 10;
+      h = h + total ~/ 60;
+      m = total % 60;
+      h = h % 24;
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+    }
+
+    return route.tipo_ruta;
+  }
+
   bool isRouteActiveNow(RouteData route) => _isRouteInTime(route);
 
   void reset() {

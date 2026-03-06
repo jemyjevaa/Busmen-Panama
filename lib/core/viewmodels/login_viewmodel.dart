@@ -17,7 +17,8 @@ class LoginViewModel extends ChangeNotifier {
 
   final language = LanguageService();
 
-  final formKeyLogin = GlobalKey<FormState>();
+  // formKeyLogin has been moved to _LoginViewState to avoid GlobalKey conflicts
+  // when two LoginView instances coexist briefly during navigation transitions.
   final TextEditingController userController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -91,12 +92,12 @@ class LoginViewModel extends ChangeNotifier {
     CacheUserSession().perdurePass = CacheUserSession().isPerduration?  passwordController.text:"";
   }
 
-  Future<void> login(BuildContext context) async {
+  Future<void> login(BuildContext context, GlobalKey<FormState> formKey) async {
 
     loadingLogIn = !loadingLogIn;
     notifyListeners();
 
-    if (!formKeyLogin.currentState!.validate()) {
+    if (!formKey.currentState!.validate()) {
       scaffoldMessengerKey.currentState?.showSnackBar(
         SnackBar(
           content: Text(language.getString('fill_all_fields')),
@@ -240,17 +241,13 @@ class LoginViewModel extends ChangeNotifier {
       // OneSignal Tagging
       SocketService().setOneSignalTags(CacheUserSession().companyClave ?? "", CacheUserSession().userIdCli ?? "");
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeView()),
-      );
+      // Save session data BEFORE navigating
       CacheUserSession().userEmail = userController.text;
       CacheUserSession().isLogin = true;
       perdureSession();
-      // userController.text = "";
-      // passwordController.text = "";
 
       if (context.mounted) {
+        // Single navigation — avoids double HomeView creation
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeView()),
