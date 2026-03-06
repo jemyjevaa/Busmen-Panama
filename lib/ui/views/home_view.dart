@@ -59,6 +59,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       if (widget.qrRoute != null) {
         viewModel.setQRRoute(widget.qrRoute!);
       } else {
+        // Clear any stale QR route without doing a full reset
+        viewModel.clearQRRoute();
         viewModel.getUserLocation();
         
         // Ensure data is refreshed for the current company/user session
@@ -240,11 +242,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                       icon: viewModel.isOfflineMode ? Icons.arrow_back : Icons.menu,
                       onTap: () {
                         if (viewModel.isOfflineMode) {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginView()),
-                            (route) => false,
-                          );
+                          // Clean all states when leaving QR mode to prevent persistence bugs
+                          viewModel.logout(context);
                         } else {
                           Scaffold.of(context).openDrawer();
                         }
@@ -1410,7 +1409,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 ),
               ),
               Text(
-                "${localization.getString('schedule_label')}: ${localization.getString(route.tipo_ruta.toLowerCase())}",
+                "${localization.getString('schedule_label')}: ${model.formatRouteTime(route) ?? localization.getString(route.tipo_ruta.toLowerCase())}",
                 style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600]),
               ),
               Text(
@@ -1991,7 +1990,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       children: [
         _buildDetailRow(Icons.calendar_today_rounded, localization.getString('days_label'), localization.getString(model.getActiveDaysForRoute(route))),
         const SizedBox(height: 22),
-        _buildDetailRow(Icons.access_time_filled_rounded, localization.getString('schedule_label'), localization.getString(route.tipo_ruta.toLowerCase())),
+        _buildDetailRow(Icons.access_time_filled_rounded, localization.getString('schedule_label'), model.formatRouteTime(route) ?? localization.getString(route.tipo_ruta.toLowerCase())),
         const SizedBox(height: 22),
         _buildDetailRow(Icons.alt_route_rounded, localization.getString('route_label'), localization.getString(route.tramo.toLowerCase())),
       ],
@@ -3053,7 +3052,7 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                             ],
                           ),
                           title: Text(
-                            "${context.read<LanguageService>().getString('shift_label')}: ${context.read<LanguageService>().getString(route.tipo_ruta.toLowerCase())}",
+                            "${context.read<LanguageService>().getString('schedule_label')}: ${context.read<SchedulesViewModel>().formatRouteTime(route) ?? context.read<LanguageService>().getString(route.tipo_ruta.toLowerCase())}",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -3061,7 +3060,7 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
                             ),
                           ),
                           subtitle: Text(
-                            context.read<LanguageService>().getString('view_details'), 
+                            "${context.read<LanguageService>().getString(context.read<SchedulesViewModel>().getActiveDaysForRoute(route))}",
                             style: TextStyle(fontSize: 11, color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[500])
                           ),
                           trailing: const Icon(Icons.info_outline_rounded, size: 20, color: Colors.grey),

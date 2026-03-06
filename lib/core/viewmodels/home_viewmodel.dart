@@ -32,6 +32,15 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 
+  /// Clears the QR route without doing a full state reset.
+  /// Used when entering HomeView in normal (non-QR) mode.
+  void clearQRRoute() {
+    if (_qrRoute != null) {
+      _qrRoute = null;
+      notifyListeners();
+    }
+  }
+
   Future<void> centerOnQRRoute() async {
     if (_mapController == null || _qrRoute == null || _qrRoute!.paradas.isEmpty) return;
     

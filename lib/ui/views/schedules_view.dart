@@ -116,7 +116,7 @@ class SchedulesView extends StatelessWidget {
                           const Icon(Icons.access_time_rounded, color: Colors.white70, size: 16),
                           const SizedBox(width: 8),
                           Text(
-                            "${localization.getString('shift_label')}: ${localization.getString(viewModel.selectedRoute!.tipo_ruta.toLowerCase())}",
+                            "${localization.getString('schedule_label')}: ${viewModel.formatRouteTime(viewModel.selectedRoute!) ?? localization.getString(viewModel.selectedRoute!.tipo_ruta.toLowerCase())}",
                             style: const TextStyle(color: Colors.white70, fontSize: 13),
                           ),
                         ],
@@ -490,7 +490,7 @@ class _SimpleRouteGroupState extends State<_SimpleRouteGroup> {
                  if (_selectedTramo != null) ...[
                    const SizedBox(height: 10),
                    ...displayed.map((r) => ListTile(
-                       title: Text("${widget.localization.getString('shift_label')}: ${widget.localization.getString(r.tipo_ruta.toLowerCase())}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                       title: Text("${widget.localization.getString('schedule_label')}: ${widget.model.formatRouteTime(r) ?? widget.localization.getString(r.tipo_ruta.toLowerCase())}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                        subtitle: Text(
                          "${widget.localization.getString('days_label')}: ${widget.localization.getString(widget.model.getActiveDays(r.dia_ruta ?? r.tipo_ruta))}", 
                          style: const TextStyle(fontSize: 11)

@@ -68,11 +68,12 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
         setState(() {
           _hasPermission = status.isGranted;
           _isCheckingPermission = false;
-          if (!status.isGranted) {
-            _lastError = 'Permiso de cámara denegado (Status: ${status.name})';
+          if (status.isPermanentlyDenied) {
+            _lastError = 'El permiso fue denegado permanentemente. Por favor, habilítalo en los ajustes.';
+          } else if (!status.isGranted) {
+            _lastError = 'Permiso de cámara denegado';
           }
         });
-        // With autoStart: true, the widget will start itself once _hasPermission is true
       }
     } catch (e) {
       debugPrint('QRScanner: Error checking permission: $e');
@@ -149,8 +150,19 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
-                        onPressed: _checkPermission,
-                        child: const Text('Conceder Permiso'),
+                        onPressed: () async {
+                          final status = await Permission.camera.status;
+                          if (status.isPermanentlyDenied) {
+                            await openAppSettings();
+                          } else {
+                            _checkPermission();
+                          }
+                        },
+                        child: Text(
+                          _lastError?.contains('ajustes') ?? false 
+                            ? 'Abrir Ajustes' 
+                            : 'Conceder Permiso'
+                        ),
                       ),
                     ],
                   ),
