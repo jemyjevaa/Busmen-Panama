@@ -5,7 +5,7 @@ import 'package:busmen_panama/core/services/url_service.dart';
 
 class GoogleDirectionsService {
   final UrlService _urlService = UrlService();
-  final String _apiKey = "AIzaSyA6WSHJ8R0AMDhhk0e_-Sn0KLEwSB60QKw";
+  final String _apiKey = "AIzaSyA5cwVTWa7Dfsm_CUG8K2dAilcAxSCL-UQ";
 
   Future<List<LatLng>> getRoutePolyline(List<LatLng> stops) async {
     if (stops.length < 2) return stops;

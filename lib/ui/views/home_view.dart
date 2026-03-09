@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+// import 'package:showcaseview/showcaseview.dart'; // Removed
+// import 'package:shared_preferences/shared_preferences.dart'; // Removed if not used elsewhere
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/core/viewmodels/home_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
@@ -12,6 +14,7 @@ import 'package:busmen_panama/ui/views/profile_view.dart';
 import 'package:busmen_panama/ui/views/schedules_view.dart';
 import 'package:busmen_panama/ui/views/lost_found_view.dart';
 import 'package:busmen_panama/ui/views/password_view.dart';
+import 'package:busmen_panama/ui/views/support_bot_view.dart';
 import 'package:busmen_panama/ui/views/notification_view.dart';
 import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/login_viewmodel.dart';
@@ -36,6 +39,9 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   bool _isMapMenuOpen = false;
   BitmapDescriptor? _busIcon;
+  
+  // Scaffold key for programmatic drawer control
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -69,6 +75,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       }
     });
   }
+
 
   @override
   void dispose() {
@@ -184,12 +191,12 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     final bool isRouteActive = selectedRoute != null && schedulesViewModel.isRouteActiveNow(selectedRoute);
 
     return Scaffold(
+      key: _scaffoldKey,
       drawer: viewModel.isOfflineMode ? null : _buildDrawer(context, viewModel, localization),
       body: viewModel.isLoadingLocation
           ? const Center(child: CircularProgressIndicator())
-          : Builder(
-              builder: (context) => Stack(
-                children: [
+          : Stack(
+              children: [
                   GoogleMap(
                     key: ValueKey('${viewModel.isOfflineMode ? 'offline' : 'online'}_map'),
                     mapType: viewModel.currentMapType,
@@ -234,7 +241,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     polylines: _buildMapPolylines(viewModel, schedulesViewModel),
                   ),
 
-                  // Top Left Menu Button
                   Positioned(
                     top: 70,
                     left: 20,
@@ -245,7 +251,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                           // Clean all states when leaving QR mode to prevent persistence bugs
                           viewModel.logout(context);
                         } else {
-                          Scaffold.of(context).openDrawer();
+                          _scaffoldKey.currentState?.openDrawer();
                         }
                       },
                     ),
@@ -492,7 +498,6 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                           ),
                           if (!viewModel.isOfflineMode) ...[
                             const SizedBox(height: 15),
-                            // SELECT ROUTE BUTTON (UPGRADED)
                             SizedBox(
                               width: double.infinity,
                               height: 60,
@@ -547,8 +552,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
     );
   }
@@ -756,7 +760,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   title: localization.getString('monitoring_center'),
                   onTap: () {
                     Navigator.pop(context); // Close drawer
-                    viewModel.makeMonitoringCall();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SupportBotView()),
+                    );
                   },
                 ),
                 const SizedBox(height: 10),
@@ -2264,12 +2271,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   Widget _buildDetailRow(IconData icon, String title, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF064DC3).withOpacity(0.05),
+            color: const Color(0xFF064DC3).withOpacity(isDark ? 0.15 : 0.05),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: const Color(0xFF064DC3), size: 22),
@@ -2278,14 +2286,14 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+            Text(title, style: TextStyle(color: isDark ? Colors.white54 : Colors.grey[500], fontSize: 12)),
             const SizedBox(height: 2),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                color: Colors.black87,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
           ],

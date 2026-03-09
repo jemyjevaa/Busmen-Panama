@@ -108,7 +108,18 @@ class _QRScannerViewState extends State<QRScannerView> with WidgetsBindingObserv
   int? _extractIdFrecuencia(String raw) {
     try {
       final uri = Uri.tryParse(raw);
-      if (uri != null && uri.queryParameters.containsKey('id_frecuencia')) {
+      if (uri == null) return null;
+
+      // 1. New format: https://lectorasbusmenpa.geovoy.com/v2/q/71
+      // pathSegments would be ['v2', 'q', '71']
+      if (uri.pathSegments.length >= 3 &&
+          uri.pathSegments[0] == 'v2' &&
+          uri.pathSegments[1] == 'q') {
+        return int.tryParse(uri.pathSegments[2]);
+      }
+
+      // 2. Legacy format: https://lectorasbusmenpa.geovoy.com/...?id_frecuencia=73
+      if (uri.queryParameters.containsKey('id_frecuencia')) {
         return int.tryParse(uri.queryParameters['id_frecuencia']!);
       }
     } catch (_) {}
