@@ -2528,7 +2528,7 @@ class _FlyerStoryViewerState extends State<_FlyerStoryViewer> {
                 if (widget.flyers.isNotEmpty)
                   Row(
                     children: List.generate(
-                      widget.flyers.length,
+                      (widget.flyers.length-1),
                           (index) => Expanded(
                         child: Padding(
                           padding:
