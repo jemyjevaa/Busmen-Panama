@@ -103,7 +103,7 @@ class UrlService {
 
   /// Frequency endpoint for QR-scanned routes
   String getUrlQRFrecuencia(int idFrecuencia) {
-    return 'https://lectorasbusmenpa.geovoy.com/Frecuencia2ControllerApi/movil_exportar_json?id_frecuencia=$idFrecuencia';
+    return 'https://lectorasbusmenpa.geovoy.com/v2/q/$idFrecuencia';
   }
 
 }
