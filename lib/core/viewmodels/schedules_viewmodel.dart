@@ -116,31 +116,22 @@ class SchedulesViewModel extends ChangeNotifier {
   String getStopLiveStatus(StopData stop) {
     if (_unit == null || _stops.isEmpty) return 'status_pending';
     
-    // 1. Check if whole route is finished
-    if (isRouteFinished) return 'status_completed';
+    final stopIndex = _stops.indexOf(stop);
+    
+    // If route finished or bus already passed this stop based on index
+    if (stopIndex < _currentUnitStopIndex) return 'status_completed';
 
     final unitLat = double.tryParse(_unit!.lat) ?? 0.0;
     final unitLon = double.tryParse(_unit!.lon) ?? 0.0;
+    final distance = Geolocator.distanceBetween(unitLat, unitLon, stop.latitud, stop.longitud);
     
-    final stopIndex = _stops.indexOf(stop);
-    
-    // Proximity check for "Unidad en el punto" (Threshold 70 meters for better catch)
-    final distance = Geolocator.distanceBetween(
-      unitLat, unitLon, 
-      stop.latitud, stop.longitud
-    );
-    
-    if (distance < 70) return 'status_at_stop';
+    // Physically at the stop
+    if (distance < 80) return 'status_at_stop';
 
-    // Update internal current tracker
-    _updateTrackingIndex(unitLat, unitLon);
+    // If it's the current "anchor" stop but unit moved away
+    if (stopIndex == _currentUnitStopIndex) return 'status_completed';
 
-    if (stopIndex < _currentUnitStopIndex) return 'status_completed';
-    if (stopIndex == _currentUnitStopIndex) {
-      // If we are far from the "current" stop anchor but it's our last known anchor, 
-      // it means we've already departed/passed it.
-      return 'status_completed'; 
-    }
+    // If it's the next one
     if (stopIndex == _currentUnitStopIndex + 1) return 'status_in_transit';
     
     return 'status_pending';
@@ -178,40 +169,44 @@ class SchedulesViewModel extends ChangeNotifier {
   void _updateTrackingIndex(double unitLat, double unitLon) {
     if (_stops.isEmpty) return;
 
-    // Initial Snap: If we haven't started tracking, find the absolute closest stop
-    // to correctly mark previous stops as completed even if we join mid-route.
+    // 1. INITIAL SNAP (On entering): 
+    // Mark all stops the bus ALREADY PASSED.
     if (_currentUnitStopIndex == -1) {
-      int closestIndex = 0;
-      double minDistance = double.infinity;
-
+      int lastPassedIndex = -1;
+      
+      // Look for the last stop the bus approached or passed
+      // Use historical proximity logic
       for (int i = 0; i < _stops.length; i++) {
         final d = Geolocator.distanceBetween(unitLat, unitLon, _stops[i].latitud, _stops[i].longitud);
-        if (d < minDistance) {
-          minDistance = d;
-          closestIndex = i;
-        }
+        
+        // If bus is within 150m of a stop, mark it as passed/reached
+        if (d < 150) {
+          lastPassedIndex = i;
+        } 
       }
 
-      _currentUnitStopIndex = closestIndex;
-      print("DEBUG - Initial tracking snap to stop: ${_stops[closestIndex].nombre_parada} (Index: $closestIndex)");
+      if (lastPassedIndex != -1) {
+        _currentUnitStopIndex = lastPassedIndex;
+        print("⚡ Initial Snap: Bus already passed up to stop index $lastPassedIndex");
+        notifyListeners();
+      }
       return;
     }
 
-    // Normal Forward Tracking:
-    int bestIndex = -1;
-    // Look forward from current anchor to find the next stop we are hitting/near
-    for (int i = _currentUnitStopIndex; i < _stops.length; i++) {
-       final d = Geolocator.distanceBetween(unitLat, unitLon, _stops[i].latitud, _stops[i].longitud);
-       // We only consider it a new "anchor" if it's within 150m (generous for GPS drift)
-       if (d < 150) {
-          bestIndex = i;
-          break;
-       }
+    // 2. REAL-TIME TRACKING:
+    // Only advance if bus touches a stop AFTER the current anchor.
+    int nextFoundIndex = -1;
+    for (int i = _currentUnitStopIndex + 1; i < _stops.length; i++) {
+      final d = Geolocator.distanceBetween(unitLat, unitLon, _stops[i].latitud, _stops[i].longitud);
+      if (d < 130) { // Detection threshold
+        nextFoundIndex = i;
+      }
     }
 
-    if (bestIndex != -1 && bestIndex > _currentUnitStopIndex) {
-      _currentUnitStopIndex = bestIndex;
-      print("DEBUG - Tracking index advanced to: $bestIndex (${_stops[bestIndex].nombre_parada})");
+    if (nextFoundIndex != -1) {
+      _currentUnitStopIndex = nextFoundIndex;
+      print("🚌 Bus advanced to stop: ${_stops[nextFoundIndex].nombre_parada}");
+      notifyListeners();
     }
   }
 
@@ -558,7 +553,13 @@ class SchedulesViewModel extends ChangeNotifier {
         }
         
         if (lat != null && lon != null) {
+          final double latVal = double.tryParse(lat.toString()) ?? 0.0;
+          final double lonVal = double.tryParse(lon.toString()) ?? 0.0;
+          
           _updateUnitPosition(lat.toString(), lon.toString());
+          
+          // Trigger tracking update
+          _updateTrackingIndex(latVal, lonVal);
         }
       } catch (e) {
         print("❌ Socket error: $e");
@@ -604,6 +605,9 @@ class SchedulesViewModel extends ChangeNotifier {
         heading: newHeading, // Store calculated heading
       );
 
+      // Trigger tracking update on static position set
+      _updateTrackingIndex(newLat, newLon);
+
       notifyListeners();
     }
   }
@@ -635,7 +639,14 @@ class SchedulesViewModel extends ChangeNotifier {
           
           if (lat != null && lon != null) {
           final economico = lastPos['economico']?.toString() ?? lastPos['unit']?.toString();
+          final double latVal = double.tryParse(lat.toString()) ?? 0.0;
+          final double lonVal = double.tryParse(lon.toString()) ?? 0.0;
+          
           _updateUnitPosition(lat.toString(), lon.toString(), economico: economico);
+          
+          // Trigger tracking update on last position fetch
+          _updateTrackingIndex(latVal, lonVal);
+          
           print("DEBUG - Last position updated: $lat, $lon (Unit: $economico)");
         } else {
             print("WARNING - Position data has null coordinates. Record: $lastPos");

@@ -435,8 +435,8 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                                 const SizedBox(height: 4),
                                                 Text(
                                                   viewModel.isOfflineMode 
-                                                      ? (viewModel.isQRRouteActive ? "EN HORARIO" : "FUERA DE HORARIO")
-                                                      : (isRouteActive ? (schedulesViewModel.getCurrentStop() != null ? "${localization.getString('current_stop_label')}: ${schedulesViewModel.getCurrentStop()!.nombre_parada}" : localization.getString('live_tracking')) : "FUERA DE HORARIO"),
+                                                      ? (viewModel.isQRRouteActive ? localization.getString('en_horario') : localization.getString('out_of_schedule'))
+                                                      : (isRouteActive ? (schedulesViewModel.getCurrentStop() != null ? "${localization.getString('current_stop_label')}: ${schedulesViewModel.getCurrentStop()!.nombre_parada}" : localization.getString('live_tracking')) : localization.getString('out_of_schedule')),
                                                   style: TextStyle(
                                                     color: (viewModel.isOfflineMode ? viewModel.isQRRouteActive : isRouteActive) ? Colors.grey[600] : Colors.orange[800],
                                                     fontWeight: FontWeight.bold,
@@ -1263,7 +1263,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     if (model.filterOption == 'filter_all') {
                        final groups = model.groupedRoutes;
                        if (groups.isEmpty) {
-                         return _buildEmptyState(Icons.search_off, model.searchQuery.isEmpty ? "No hay rutas disponibles" : "No se encontraron rutas");
+                         return _buildEmptyState(Icons.search_off, model.searchQuery.isEmpty ? localization.getString('no_routes_available') : localization.getString('no_routes_found'));
                        }
                        return ListView.builder(
                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -1392,9 +1392,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        "LIVE",
-                        style: TextStyle(
+                      Text(
+                        localization.getString('live_status'),
+                        style: const TextStyle(
                           color: Colors.green,
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
@@ -1420,7 +1420,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                 style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600]),
               ),
               Text(
-                "${localization.getString('route_label')}: ${localization.getString(route.tramo.toLowerCase())}",
+                "${localization.getString('route_label')} - ${localization.getString(route.tramo.toLowerCase().trim())}",
                 style: TextStyle(fontSize: 11, color: Theme.of(context).brightness == Brightness.dark ? Colors.white38 : Colors.grey[500]),
               ),
             ],
@@ -1487,7 +1487,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    isActive ? "RUTA ACTIVA" : "FUERA DE HORARIO",
+                    isActive ? localization.getString('active_route') : localization.getString('out_of_schedule'),
                     style: TextStyle(
                       color: isActive ? Colors.green : Colors.orange, 
                       fontWeight: FontWeight.bold, 
@@ -1521,7 +1521,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      "La ruta se encuentra ${isActive ? 'operando actualmente.' : 'fuera de su horario habitual.'}",
+                      isActive ? localization.getString('route_operating_now') : localization.getString('route_outside_habitual'),
                       style: TextStyle(color: Colors.grey[700], fontSize: 13),
                     ),
                   ),
@@ -1563,9 +1563,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   elevation: 0,
                 ),
-                child: const Text(
-                  "SELECCIONAR ESTA RUTA",
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                child: Text(
+                  localization.getString('select_this_route'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -3015,9 +3015,9 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
               children: [
-                _buildModernTramoChip('entry', context.read<LanguageService>().getString('entry'), Icons.login_rounded),
+                _buildModernTramoChip('entry', context.read<LanguageService>().getString('entrada'), Icons.login_rounded),
                 const SizedBox(width: 10),
-                _buildModernTramoChip('exit', context.read<LanguageService>().getString('exit'), Icons.logout_rounded),
+                _buildModernTramoChip('exit', context.read<LanguageService>().getString('salida'), Icons.logout_rounded),
               ],
             ),
           ),
@@ -3029,9 +3029,9 @@ class _RouteGroupItemState extends State<_RouteGroupItem> {
               child: Column(
                 children: [
                   if (displayedRoutes.isEmpty)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text("No routes available"), // Fallback if tramo filtering results in empty, but tramo names ENTRADA/SALIDA are usually fixed.
+                    child: Text(context.read<LanguageService>().getString('no_routes_available')),
                     )
                   else
                     ...displayedRoutes.map((route) {
