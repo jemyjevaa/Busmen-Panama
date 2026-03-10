@@ -27,6 +27,7 @@ import 'package:busmen_panama/core/services/models/qr_route_model.dart';
 import '../../app_globals.dart';
 import '../../core/services/cache_user_session.dart';
 import '../../core/services/socket_service.dart';
+import '../../core/services/simulation_service.dart';
 
 class HomeView extends StatefulWidget {
   final QRRouteResponse? qrRoute;
@@ -240,6 +241,9 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                     markers: _buildMapMarkers(viewModel, schedulesViewModel, localization, schedulesViewModel.selectedRoute),
                     polylines: _buildMapPolylines(viewModel, schedulesViewModel),
                   ),
+
+                  // NOTIFICATION BANNER (Arrivals/Warnings)
+                  const SimulationArrivalBanner(),
 
                   Positioned(
                     top: 70,
@@ -1153,8 +1157,11 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     // Reset search when opening
     schedulesViewModel.setSearchQuery('');
     
-    // Default to 'FRECUENTES' if there are recent routes, otherwise 'EN TIEMPO' or 'TODAS'
-    if (schedulesViewModel.recentRoutes.isNotEmpty) {
+    // Default to 'FAVORITAS' if there are favorite routes, 
+    // otherwise 'FRECUENTES' if there are recent routes, otherwise 'EN TIEMPO' or 'TODAS'
+    if (schedulesViewModel.favoriteRouteClaves.isNotEmpty) {
+      schedulesViewModel.setFilterOption('filter_favorite');
+    } else if (schedulesViewModel.recentRoutes.isNotEmpty) {
       schedulesViewModel.setFilterOption('filter_frequent');
     } else {
       schedulesViewModel.setFilterOption('filter_on_time');
@@ -1239,6 +1246,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                       ),
                       child: Row(
                         children: [
+                          _buildTabItem('filter_favorite', model, localization),
                           _buildTabItem('filter_frequent', model, localization),
                           _buildTabItem('filter_on_time', model, localization),
                           _buildTabItem('filter_all', model, localization),
@@ -1276,10 +1284,13 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                        );
                     } else {
                        if (routes.isEmpty) {
-                         String msg = model.filterOption == 'filter_frequent' 
-                            ? localization.getString('no_routes_segment') /* Or specific 'no_recent_routes' key if added */
+                         String msg = model.filterOption == 'filter_favorite'
+                            ? localization.getString('no_routes_available')
+                            : model.filterOption == 'filter_frequent' 
+                            ? localization.getString('no_routes_segment')
                             : localization.getString('no_routes_segment');
                          return _buildEmptyState(
+                            model.filterOption == 'filter_favorite' ? Icons.favorite_border : 
                             model.filterOption == 'filter_frequent' ? Icons.history : Icons.timer_off, 
                             msg
                          );
@@ -1425,7 +1436,24 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
               ),
             ],
           ),
-          trailing: Icon(Icons.info_outline_rounded, size: 20, color: isSelected ? const Color(0xFF064DC3) : Colors.grey[400]),
+          trailing: SizedBox(
+            width: 80,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: () => model.toggleFavorite(route),
+                  child: Icon(
+                    model.isFavorite(route.claveruta) ? Icons.favorite : Icons.favorite_border,
+                    color: model.isFavorite(route.claveruta) ? Colors.red : Colors.grey[400],
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.info_outline_rounded, size: 20, color: isSelected ? const Color(0xFF064DC3) : Colors.grey[400]),
+              ],
+            ),
+          ),
           onTap: () => _showRouteDetailsModal(context, route, model, localization),
         ),
       );
@@ -1521,8 +1549,18 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      isActive ? localization.getString('route_operating_now') : localization.getString('route_outside_habitual'),
-                      style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                      (CacheUserSession().isCopaair && route.claveruta.toUpperCase().contains('GBT'))
+                        ? "Esta ruta cuenta con frecuencias cada 15min a lo largo del día"
+                        : (isActive ? localization.getString('route_operating_now') : localization.getString('route_outside_habitual')),
+                      style: TextStyle(
+                        color: (CacheUserSession().isCopaair && route.claveruta.toUpperCase().contains('GBT'))
+                            ? const Color(0xFF064DC3)
+                            : Colors.grey[700], 
+                        fontSize: 13,
+                        fontWeight: (CacheUserSession().isCopaair && route.claveruta.toUpperCase().contains('GBT'))
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
                     ),
                   ),
                 ],
@@ -1669,7 +1707,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                   overflow: TextOverflow.visible,
                                 ),
                               ),
-                              if (model.unit != null) ...[
+                              /*if (model.unit != null) ...[
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1694,7 +1732,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                                     ],
                                   ),
                                 ),
-                              ],
+                              ],*/
                             ],
                           ),
                         ),
@@ -2310,6 +2348,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
             color: isSelected 
                 ? (Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.15) : Colors.white)
@@ -2331,7 +2370,7 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
                   ? const Color(0xFF064DC3) 
                   : (Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.grey[600]),
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 11,
             ),
           ),
         ),
@@ -3193,6 +3232,124 @@ class _BlinkingDotState extends State<_BlinkingDot> with SingleTickerProviderSta
         decoration: const BoxDecoration(
           color: Colors.green,
           shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+class SimulationArrivalBanner extends StatelessWidget {
+  const SimulationArrivalBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final simulation = context.watch<SimulationService>();
+    final message = simulation.lastArrivalMessage;
+
+    if (message == null) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 130, // Lower to avoid menu buttons
+      left: 15,
+      right: 15,
+      child: FadeInUp(
+        duration: const Duration(milliseconds: 600),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF064DC3).withOpacity(0.85),
+                    const Color(0xFF042D73).withOpacity(0.9),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.25),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF064DC3).withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                    spreadRadius: -5,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                   // Animated pulse or bus icon
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(40),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.location_on_rounded, 
+                      color: Colors.white, 
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          "ESTADO DE RUTA",
+                          style: TextStyle(
+                            color: Colors.white70,
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          message,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            height: 1.2,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => simulation.clearMessage(),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withAlpha(30),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close, 
+                          color: Colors.white60, 
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

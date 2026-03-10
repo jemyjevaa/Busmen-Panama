@@ -1,4 +1,5 @@
 import 'package:busmen_panama/ui/views/home_view.dart';
+import 'package:busmen_panama/ui/views/operator_home_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:busmen_panama/ui/views/login_view.dart';
@@ -9,7 +10,9 @@ import 'package:busmen_panama/core/viewmodels/schedules_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/lost_found_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/password_viewmodel.dart';
 import 'package:busmen_panama/core/viewmodels/notifications_viewmodel.dart';
+import 'package:busmen_panama/core/viewmodels/operator_viewmodel.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
+import 'package:busmen_panama/core/services/simulation_service.dart';
 
 import 'app_globals.dart';
 import 'core/services/cache_user_session.dart';
@@ -34,6 +37,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LostFoundViewModel()),
         ChangeNotifierProvider(create: (_) => PasswordViewModel()),
         ChangeNotifierProvider(create: (_) => NotificationsViewModel()),
+        ChangeNotifierProvider(create: (_) => OperatorViewModel()),
+        ChangeNotifierProvider(create: (_) => SimulationService()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
       ],
       child: const MyApp(),
@@ -72,7 +77,13 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.system,
-      home:CacheUserSession().isLogin? const HomeView() :const LoginView(),
+      home: CacheUserSession().isLogin 
+          ? (CacheUserSession().isOperatorMode ? const OperatorHomeView() : const HomeView()) 
+          : const LoginView(),
+      routes: {
+        '/operator_home': (context) => const OperatorHomeView(),
+        '/home': (context) => const HomeView(),
+      },
     );
   }
 }

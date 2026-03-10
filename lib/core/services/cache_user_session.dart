@@ -22,6 +22,9 @@ class CacheUserSession {
   bool get isCopaair => _prefs?.getBool('isCopaair') ?? false;
   set isCopaair(bool value) => _prefs?.setBool('isCopaair', value);
 
+  bool get isOperatorMode => _prefs?.getBool('isOperatorMode') ?? false;
+  set isOperatorMode(bool value) => _prefs?.setBool('isOperatorMode', value);
+
   int? get userSide => _prefs?.getInt('userSide')?? 0;
   set userSide(int value) => _prefs?.setInt('userSide', value);
 
@@ -96,11 +99,15 @@ class CacheUserSession {
 
   String get userLanguage => _prefs?.getString('userLanguage') ?? 'ES';
   set userLanguage(String value) => _prefs?.setString('userLanguage', value);
+
+  List<String> get favoriteRoutes => _prefs?.getStringList('favoriteRoutes') ?? [];
+  set favoriteRoutes(List<String> value) => _prefs?.setStringList('favoriteRoutes', value);
   // endregion USER DATA
 
   Future<void> clear() async {
     isLogin = false;
     isCopaair = false;
+    isOperatorMode = false;
     userSide = 0;
     companyLatLog = null;
     companyClave = null;
@@ -116,6 +123,7 @@ class CacheUserSession {
     userRuta2 = "";
     userRuta3 = "";
     userRuta4 = "";
+    favoriteRoutes = [];
     userPassword = "";
     colorOne = "#064DC3";
     colorTwo = "#064DC3";
