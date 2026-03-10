@@ -8,6 +8,7 @@ import 'package:busmen_panama/core/services/url_service.dart';
 import 'package:busmen_panama/core/services/google_directions_service.dart';
 import 'package:busmen_panama/core/services/socket_service.dart';
 import 'package:busmen_panama/core/services/language_service.dart';
+import 'package:busmen_panama/core/services/simulation_service.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -18,6 +19,7 @@ class SchedulesViewModel extends ChangeNotifier {
   final _directionsService = GoogleDirectionsService();
   final _socketService = SocketService();
   StreamSubscription? _socketSubscription;
+  StreamSubscription? _simSubscription;
 
   List<LatLng> _roadPoints = [];
   List<LatLng> get roadPoints => _roadPoints;
@@ -43,7 +45,9 @@ class SchedulesViewModel extends ChangeNotifier {
   void setFilterOption(String option) {
     // Normalize option to handle different formats (e.g., 'FRECUENTES' -> 'filter_frequent')
     final normalized = option.toLowerCase();
-    if (normalized.contains('frequent') || normalized.contains('frecuentes')) {
+    if (normalized.contains('favorite') || normalized.contains('favorita')) {
+      _filterOption = 'filter_favorite';
+    } else if (normalized.contains('frequent') || normalized.contains('frecuentes')) {
       _filterOption = 'filter_frequent';
     } else if (normalized.contains('time') || normalized.contains('tiempo')) {
       _filterOption = 'filter_on_time';
@@ -187,7 +191,14 @@ class SchedulesViewModel extends ChangeNotifier {
 
       if (lastPassedIndex != -1) {
         _currentUnitStopIndex = lastPassedIndex;
-        print("⚡ Initial Snap: Bus already passed up to stop index $lastPassedIndex");
+        final stopName = _stops[lastPassedIndex].nombre_parada;
+        final nextStopName = (lastPassedIndex + 1 < _stops.length) ? _stops[lastPassedIndex + 1].nombre_parada : null;
+        
+        print("⚡ Initial Snap: Bus already passed up to stop index $lastPassedIndex ($stopName)");
+        
+        // Trigger banner on initial snap too
+        SimulationService().notifyArrival(stopName, nextStopName: nextStopName);
+        
         notifyListeners();
       }
       return;
@@ -205,13 +216,35 @@ class SchedulesViewModel extends ChangeNotifier {
 
     if (nextFoundIndex != -1) {
       _currentUnitStopIndex = nextFoundIndex;
-      print("🚌 Bus advanced to stop: ${_stops[nextFoundIndex].nombre_parada}");
+      final stopName = _stops[nextFoundIndex].nombre_parada;
+      final nextStopName = (nextFoundIndex + 1 < _stops.length) ? _stops[nextFoundIndex + 1].nombre_parada : null;
+      
+      print("🚌 Bus advanced to stop: $stopName");
+      
+      // TRIGGER BANNER NOTIFICATION
+      SimulationService().notifyArrival(stopName, nextStopName: nextStopName);
+      
       notifyListeners();
     }
   }
 
   List<RouteData> _recentRoutes = [];
   List<RouteData> get recentRoutes => _recentRoutes;
+
+  List<String> _favoriteRouteClaves = [];
+  List<String> get favoriteRouteClaves => _favoriteRouteClaves;
+
+  bool isFavorite(String claveruta) => _favoriteRouteClaves.contains(claveruta);
+
+  void toggleFavorite(RouteData route) {
+    if (isFavorite(route.claveruta)) {
+      _favoriteRouteClaves.remove(route.claveruta);
+    } else {
+      _favoriteRouteClaves.add(route.claveruta);
+    }
+    _session.favoriteRoutes = _favoriteRouteClaves;
+    notifyListeners();
+  }
 
   // Group routes by name
   Map<String, List<RouteData>> get groupedRoutes {
@@ -246,6 +279,9 @@ class SchedulesViewModel extends ChangeNotifier {
   List<RouteData> get filteredRoutes {
     List<RouteData> baseRoutes;
     switch (_filterOption) {
+      case 'filter_favorite':
+        baseRoutes = _routes.where((r) => isFavorite(r.claveruta)).toList();
+        break;
       case 'filter_frequent':
         baseRoutes = recentRoutes;
         break;
@@ -354,8 +390,18 @@ class SchedulesViewModel extends ChangeNotifier {
 
   SchedulesViewModel() {
     print("DEBUG - SchedulesViewModel constructor called");
+    _favoriteRouteClaves = _session.favoriteRoutes;
     fetchRoutes();
+    
+    // Listen to simulation position broadcasts
+    _simSubscription = SimulationService().positionStream.listen((pos) {
+       if (selectedRoute != null && selectedRoute!.claveruta == 'SIM_PACORA') {
+         _updateUnitPosition(pos['lat'].toString(), pos['lon'].toString(), economico: "SIM-01");
+       }
+    });
   }
+
+
 
   Future<void> fetchRoutes() async {
     print("DEBUG - fetchRoutes - userSide: ${_session.userSide}");
@@ -683,7 +729,17 @@ class SchedulesViewModel extends ChangeNotifier {
         },
       );
 
-      if (response != null && (response.respuesta == 'existe' || response.respuesta == 'correcto')) {
+      if (claveruta == 'SIM_PACORA') {
+        // Mock stops for Pacora with pseudo-coordinates for simulation
+        _stops = [
+          StopData(claveruta: 'SIM_PACORA', nombre_parada: 'C.C. La Doña (Inicio)', horario: '06:00', estatus: 'A tiempo', hora_parada: '06:00', latitud: 9.071852, longitud: -79.370503, numero_parada: 1),
+          StopData(claveruta: 'SIM_PACORA', nombre_parada: 'Megamall', horario: '06:15', estatus: 'A tiempo', hora_parada: '06:15', latitud: 9.068222, longitud: -79.385202, numero_parada: 2),
+          StopData(claveruta: 'SIM_PACORA', nombre_parada: 'Plaza Tocumen', horario: '06:30', estatus: 'A tiempo', hora_parada: '06:30', latitud: 9.055877, longitud: -79.431252, numero_parada: 3),
+          StopData(claveruta: 'SIM_PACORA', nombre_parada: 'Metro Mall', horario: '06:45', estatus: 'A tiempo', hora_parada: '06:45', latitud: 9.050519, longitud: -79.453303, numero_parada: 4),
+          StopData(claveruta: 'SIM_PACORA', nombre_parada: 'Plaza Carolina', horario: '07:00', estatus: 'A tiempo', hora_parada: '07:00', latitud: 9.020583, longitud: -79.489370, numero_parada: 5),
+          StopData(claveruta: 'SIM_PACORA', nombre_parada: 'Vía España (Final)', horario: '07:15', estatus: 'A tiempo', hora_parada: '07:15', latitud: 8.986617, longitud: -79.529844, numero_parada: 6),
+        ];
+      } else if (response != null && (response.respuesta == 'existe' || response.respuesta == 'correcto')) {
       // Filter unique stops by numero_parada to avoid duplication if API returns same stops multiple times
       final Map<int, StopData> uniqueStopsMap = {};
       for (var stop in response.datos) {
@@ -835,6 +891,7 @@ class SchedulesViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _simSubscription?.cancel();
     _stopSocketTracking();
     super.dispose();
   }

@@ -134,7 +134,7 @@ class SchedulesView extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (viewModel.unit != null) ...[
+                  /*if (viewModel.unit != null) ...[
                     const SizedBox(height: 20),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
@@ -166,7 +166,7 @@ class SchedulesView extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ],
+                  ],*/
                 ],
               ),
             ),

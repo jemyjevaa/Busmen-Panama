@@ -110,6 +110,24 @@ class LoginViewModel extends ChangeNotifier {
     }
 
     try{
+      // Simulation for Operator Mode
+      if (userController.text.trim() == "Operador" && passwordController.text == "1234") {
+        CacheUserSession().isLogin = true;
+        CacheUserSession().isOperatorMode = true;
+        CacheUserSession().userName = "Operador de Simulación";
+        CacheUserSession().userEmail = "operador@busmen.com";
+        
+        loadingLogIn = false;
+        notifyListeners();
+        
+        if (context.mounted) {
+           // We'll navigate to a different view for Operator
+           // For now, let's just use home but I will create OperatorHomeView next
+           Navigator.pushReplacementNamed(context, '/operator_home');
+        }
+        return;
+      }
+
       // region VALIDATE DOMINE
       ResponseValidateDomine? respDomine = await callApi.handlingRequestParsed<ResponseValidateDomine>(
           urlParam: urlService.getUrlDomineValidate(),
