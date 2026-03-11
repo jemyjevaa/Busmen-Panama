@@ -303,6 +303,11 @@ class SchedulesViewModel extends ChangeNotifier {
   }
 
   bool _isRouteInTime(RouteData route) {
+    // 0. Use specialized logic for Copaair/Grainger
+    if (CacheUserSession().isCopaair) {
+      return _isRouteOnTimeCopaGrainger(route);
+    }
+
     try {
       final now = DateTime.now();
       final String turno = route.tipo_ruta.toUpperCase();
@@ -378,6 +383,68 @@ class SchedulesViewModel extends ChangeNotifier {
       return isInTimeWindow;
     } catch (e) {
       debugPrint("Error in _isRouteInTime: $e");
+      return false;
+    }
+  }
+
+  /// Specialized filtering logic for Copaair and Grainger accounts.
+  /// Follows the Swift implementation provided by the user.
+  bool _isRouteOnTimeCopaGrainger(RouteData route) {
+    try {
+      final now = DateTime.now();
+
+      // 1. Time Validation (HH:mm:ss comparison)
+      if (route.hora_inicio == null || route.hora_fin == null) return false;
+
+      final String currentTimeStr =
+          "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}";
+
+      final String start = route.hora_inicio!.trim();
+      final String end = route.hora_fin!.trim();
+
+      // Basic string comparison works for HH:mm:ss if correctly padded
+      bool timeMatch =
+          currentTimeStr.compareTo(start) >= 0 && currentTimeStr.compareTo(end) <= 0;
+
+      if (!timeMatch) {
+        print("DEBUG - Route ${route.claveruta} filtered out by time: $currentTimeStr not in [$start, $end]");
+        return false;
+      }
+
+      // 2. Day Validation (Normalization and Range support)
+      String dayFilter = (route.dia_ruta ?? '').toUpperCase().trim();
+      // Remove diacritics / normalize
+      dayFilter = dayFilter.replaceAll('Á', 'A').replaceAll('É', 'E').replaceAll('Í', 'I').replaceAll('Ó', 'O').replaceAll('Ú', 'U');
+      dayFilter = dayFilter.replaceAll('MIE', 'MIE'); // Standardize Wed
+
+      if (dayFilter.isEmpty) return true; // Follow current pattern if empty
+
+      final List<String> allDays = ["LUN", "MAR", "MIE", "JUE", "VIE", "SAB", "DOM"];
+      final String currentDay = allDays[now.weekday - 1]; // Mon=1, Sun=7
+
+      if (dayFilter.contains("-")) {
+        final List<String> range = dayFilter.split("-").map((d) => d.trim()).toList();
+        if (range.length == 2) {
+          int startDayIdx = allDays.indexOf(range[0]);
+          int endDayIdx = allDays.indexOf(range[1]);
+          int todayIdx = allDays.indexOf(currentDay);
+
+          if (startDayIdx != -1 && endDayIdx != -1 && todayIdx != -1) {
+            if (startDayIdx <= endDayIdx) {
+              return todayIdx >= startDayIdx && todayIdx <= endDayIdx;
+            } else {
+              // Wrap around (e.g., SAB-MAR means SAB, DOM, LUN, MAR)
+              return todayIdx >= startDayIdx || todayIdx <= endDayIdx;
+            }
+          }
+        }
+      } else {
+        return dayFilter == currentDay;
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint("Error in _isRouteOnTimeCopaGrainger: $e");
       return false;
     }
   }
@@ -636,7 +703,8 @@ class SchedulesViewModel extends ChangeNotifier {
             
             // Only update heading if moved more than 2 meters to avoid jitter
             if (distance > 2.0) {
-               newHeading = Geolocator.bearingBetween(oldLat, oldLon, newLat, newLon);
+               double bearing = Geolocator.bearingBetween(oldLat, oldLon, newLat, newLon);
+               newHeading = (bearing + 360) % 360; // Normalize
             }
          }
       }
