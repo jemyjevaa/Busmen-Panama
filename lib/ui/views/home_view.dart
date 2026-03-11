@@ -39,7 +39,14 @@ class HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   bool _isMapMenuOpen = false;
-  BitmapDescriptor? _busIcon;
+  BitmapDescriptor? _busIconEast;
+  BitmapDescriptor? _busIconWest;
+  BitmapDescriptor? _unitLabelIcon;
+  ui.Image? _stopMarkerImage;
+  BitmapDescriptor? _pureStopMarkerIcon; // Single icon for all stops
+  bool _showUnitLabel = false;
+  String? _lastLoadedUnitId; 
+  final Map<int, BitmapDescriptor> _customStopMarkerCache = {}; 
   
   // Scaffold key for programmatic drawer control
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -105,49 +112,81 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
   }
 
   Future<void> _loadCustomMarkers() async {
+    final schedulesViewModel = context.read<SchedulesViewModel>();
+    final unitId = schedulesViewModel.unit?.economico ?? "";
+    _lastLoadedUnitId = unitId;
+
     try {
-      // Create a combined icon with a directional beam
-      _busIcon = await _getDirectionalBusIcon(
-        'assets/icons/bus_motion4.png', // Switched to PNG for compatibility with BitmapDescriptor
-        200.0, // Increased from 100.0
+      // 1. East Icon (bus_motion17DD.png) - Clean version
+      _busIconEast = await _getDirectionalBusIcon(
+        'assets/icons/bus_motion17DD.png',
+        200.0,
+        -90 * (3.1415926535897932 / 180), // -90 degrees in radians
       );
+
+      // 2. West Icon (bus_motionII2.png) - Clean version
+      _busIconWest = await _getDirectionalBusIcon(
+        'assets/icons/bus_motionII2.png',
+        200.0,
+        90 * (3.1415926535897932 / 180), // 90 degrees in radians
+      );
+
+      // 3. Independent Label Icon
+      if (unitId.isNotEmpty) {
+        _unitLabelIcon = await _getUnitLabelIcon(unitId);
+      }
+
+      // 4. Custom Stop Marker Image (Simplified & Larger)
+      final ByteData data = await rootBundle.load('assets/icons/marker.png');
+      final ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: 120, targetHeight: 120);
+      final ui.FrameInfo fi = await codec.getNextFrame();
+      _stopMarkerImage = fi.image;
+      
+      // Pre-generate the "pure" marker icon
+      _pureStopMarkerIcon = await _getCustomStopMarker(Colors.transparent); 
+      _customStopMarkerCache.clear(); 
+
       if (mounted) setState(() {});
     } catch (e) {
-      debugPrint('Error loading bus icon: $e');
-      // Fallback
-      _busIcon = await BitmapDescriptor.fromAssetImage(
+      debugPrint('Error loading bus icons: $e');
+      // Fallback to simple assets
+      _busIconEast = await BitmapDescriptor.fromAssetImage(
         const ImageConfiguration(size: Size(150, 150)),
-        'assets/icons/bus_motion4.png',
+        'assets/icons/bus_motion17DD.png',
+      );
+      _busIconWest = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(150, 150)),
+        'assets/icons/bus_motionII2.png',
       );
       if (mounted) setState(() {});
     }
   }
 
-  Future<BitmapDescriptor> _getDirectionalBusIcon(String assetPath, double size) async {
+  Future<BitmapDescriptor> _getDirectionalBusIcon(String assetPath, double size, double rotationOffset) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
-    final double canvasSize = size * 2.5; // Larger canvas to contain the beam
+    final double canvasSize = size * 3.5; // Keeping space for rotation
     
-    // 1. Draw the "Beam" (Haz de luz / Cono de dirección)
+    // 1. Draw the "Beam"
     final Paint beamPaint = Paint()
       ..shader = ui.Gradient.linear(
         Offset(canvasSize / 2, canvasSize / 2),
-        Offset(canvasSize / 2, 0),
+        Offset(canvasSize / 2, canvasSize * 0.1),
         [
-          const Color(0xFFFFD700).withOpacity(0.5), // Yellow (Gold) Beam
+          const Color(0xFFFFD700).withOpacity(0.5),
           const Color(0xFFFFD700).withOpacity(0.01),
         ],
       );
 
     final Path beamPath = Path()
       ..moveTo(canvasSize / 2, canvasSize / 2)
-      ..lineTo(canvasSize / 2 - (canvasSize / 3.5), 0)
-      ..lineTo(canvasSize / 2 + (canvasSize / 3.5), 0)
+      ..lineTo(canvasSize / 2 - (canvasSize / 3.5), canvasSize * 0.1)
+      ..lineTo(canvasSize / 2 + (canvasSize / 3.5), canvasSize * 0.1)
       ..close();
 
     canvas.drawPath(beamPath, beamPaint);
 
-    // 2. Load and Draw the Bus Image
+    // 2. Draw the Bus Image
     final ByteData data = await rootBundle.load(assetPath);
     final ui.Codec codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(), 
@@ -155,20 +194,91 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     );
     final ui.FrameInfo fi = await codec.getNextFrame();
     
-    // Draw the bus image centered in the canvas
+    canvas.save();
+    canvas.translate(canvasSize / 2, canvasSize / 2);
+    canvas.rotate(rotationOffset);
     canvas.drawImage(
       fi.image, 
-      Offset(canvasSize / 2 - size / 2, canvasSize / 2 - size / 2), 
-      Paint()
+      Offset(-fi.image.width / 2, -fi.image.height / 2), 
+      Paint(),
     );
+    canvas.restore();
 
-    final ui.Image image = await pictureRecorder.endRecording().toImage(canvasSize.toInt(), canvasSize.toInt());
+    final ui.Image image = await pictureRecorder.endRecording().toImage(
+      canvasSize.toInt(), 
+      canvasSize.toInt(),
+    );
     final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    
-    if (byteData == null) return BitmapDescriptor.defaultMarker;
-    
-    return BitmapDescriptor.fromBytes(byteData.buffer.asUint8List());
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
   }
+
+  /// Generates a standalone label icon for the unit ID
+  Future<BitmapDescriptor> _getUnitLabelIcon(String economico) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    
+    const String labelText = "ID UNIDAD: ";
+    final textSpan = TextSpan(
+      children: [
+        TextSpan(text: labelText, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.normal)),
+        TextSpan(text: economico, style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold)),
+      ],
+    );
+    
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    final double padding = 30.0;
+    final double rectWidth = textPainter.width + padding * 2;
+    final double rectHeight = textPainter.height + padding;
+    final double canvasWidth = rectWidth + 20; // Extra room for shadow
+    final double canvasHeight = rectHeight + 20;
+
+    final Rect rect = Rect.fromLTWH(10, 10, rectWidth, rectHeight);
+    final RRect rrect = RRect.fromRectAndRadius(rect, const Radius.circular(50));
+    
+    // Shadow
+    canvas.drawRRect(rrect.shift(const Offset(0, 4)), Paint()..color = Colors.black38..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    // Background
+    canvas.drawRRect(rrect, Paint()..color = const Color(0xFF064DC3));
+    // Border
+    canvas.drawRRect(rrect, Paint()..color = Colors.white.withOpacity(0.5)..style = PaintingStyle.stroke..strokeWidth = 3);
+    // Text
+    textPainter.paint(canvas, Offset(rect.left + padding, rect.top + padding / 2));
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(
+      canvasWidth.toInt(), 
+      canvasHeight.toInt(),
+    );
+    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
+  /// Generates a "pure" custom marker using only the loaded asset
+  Future<BitmapDescriptor> _getCustomStopMarker(Color _) async {
+    const double size = 120.0;
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+    
+    // Draw the Asset Image "pure" (no background, no shadow)
+    if (_stopMarkerImage != null) {
+      paintImage(
+        canvas: canvas,
+        rect: const Rect.fromLTWH(0, 0, size, size),
+        image: _stopMarkerImage!,
+        fit: BoxFit.contain,
+      );
+    }
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(size.toInt(), size.toInt());
+    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -2090,19 +2200,48 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
       final lon = double.tryParse(unit.lon) ?? 0.0;
       
       if (lat != 0.0 && lon != 0.0) {
+        // Dynamic label update: reload icons if unit ID changed
+        if (_lastLoadedUnitId != unit.economico) {
+          _loadCustomMarkers();
+        }
+
+        // Select icon based on heading: East (0-180) vs West (180-360)
+        final bool isHeadingWest = unit.heading > 180 && unit.heading < 360;
+        final icon = isHeadingWest ? _busIconWest : _busIconEast;
+
         markers.add(
           Marker(
             markerId: const MarkerId('unit_marker'),
             position: LatLng(lat, lon),
-            icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            icon: icon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
             rotation: unit.heading, // Applied calculated headind
+            flat: true, // IMPORTANT: Makes the icon rotate on the map surface
             anchor: const Offset(0.5, 0.5),
-            infoWindow: InfoWindow(
-              title: "ID UNIDAD: ${unit.economico}",
-              snippet: localization.getString('live_tracking'),
-            ),
+            onTap: () {
+              setState(() {
+                _showUnitLabel = !_showUnitLabel;
+              });
+            },
           ),
         );
+
+        // 1.1 Optional Interactive Floating Label
+        if (_showUnitLabel && _unitLabelIcon != null) {
+          markers.add(
+            Marker(
+              markerId: const MarkerId('unit_label'),
+              position: LatLng(lat, lon),
+              icon: _unitLabelIcon!,
+              flat: false, // Label always faces the user
+              anchor: const Offset(0.5, 1.4), // Positioned "above" the bus
+              onTap: () {
+                setState(() {
+                  _showUnitLabel = false;
+                });
+              },
+            ),
+          );
+        }
       }
     }
 
@@ -2114,28 +2253,10 @@ class _HomeViewState extends State<HomeView> with WidgetsBindingObserver {
     for (var stop in stopsToShow) {
       final bool isMyStop = model.selectedUserStop?.claveruta == stop.claveruta && model.selectedUserStop?.numero_parada == stop.numero_parada;
       
-      double hue = BitmapDescriptor.hueAzure; // Default Blue for all stops
-      
-      // Apply highlighting ONLY if filter is active AND we have a tracked unit
-      if (model.showFilteredStops && model.unit != null) {
-        if (stop.numero_parada == model.getPreviousStop()?.numero_parada) {
-          hue = BitmapDescriptor.hueViolet; 
-        } else if (stop.numero_parada == model.getCurrentStop()?.numero_parada) {
-          hue = BitmapDescriptor.hueGreen;
-        } else if (stop.numero_parada == model.getNextStop()?.numero_parada) {
-          hue = BitmapDescriptor.hueYellow;
-        }
-      }
-
-      // "My Stop" (Red) always takes precedence over everything
-      if (isMyStop) {
-        hue = BitmapDescriptor.hueRed; 
-      }
-
       markers.add(Marker(
         markerId: MarkerId('stop_${stop.claveruta}_${stop.numero_parada}'),
         position: LatLng(stop.latitud, stop.longitud),
-        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+        icon: _pureStopMarkerIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         consumeTapEvents: true,
         onTap: () {
           if (stop.url_imagen != null && stop.url_imagen!.isNotEmpty) {
